@@ -14,7 +14,7 @@
     // gopls
     "go.useLanguageServer": true,
     "gopls": {
-        "formatting.local": "github.com/golang-templates/seed",
+        "formatting.local": "github.com/PixDale/sh-code-challenge",
         "formatting.gofumpt": true
     },
     // golangci-lint  

@@ -1,3 +1,3 @@
 FROM scratch
-COPY seed /
-ENTRYPOINT ["/seed"]
+COPY sh-code-challenge /
+ENTRYPOINT ["/sh-code-challenge"]
