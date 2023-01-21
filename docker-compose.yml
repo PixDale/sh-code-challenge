@@ -14,7 +14,7 @@ services:
       - fullstack
 
   fullstack-mysql:
-    image: mysql:latest
+    image: mysql
     container_name: full_db_mysql
     ports:
       - 3306:3306
@@ -30,7 +30,7 @@ services:
       - fullstack
 
   phpmyadmin:
-    image: phpmyadmin/phpmyadmin
+    image: phpmyadmin
     container_name: phpmyadmin_container
     depends_on:
       - fullstack-mysql
