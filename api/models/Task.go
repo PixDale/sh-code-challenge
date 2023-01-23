@@ -106,7 +106,7 @@ func (t *Task) FindAllTasksByUserID(db *gorm.DB, uid uint32) (*[]Task, error) {
 func (t *Task) UpdateATask(db *gorm.DB) (*Task, error) {
 	var err error
 
-	err = db.Debug().Model(&Task{}).Where("id = ?", t.ID).Updates(Task{Title: t.Title, Content: t.Content, UpdatedAt: time.Now()}).Error
+	err = db.Debug().Model(&Task{}).Where("id = ?", t.ID).Updates(Task{Summary: t.Summary, UpdatedAt: time.Now()}).Error
 	if err != nil {
 		return &Task{}, err
 	}
@@ -119,8 +119,8 @@ func (t *Task) UpdateATask(db *gorm.DB) (*Task, error) {
 	return t, nil
 }
 
-func (t *Task) DeleteATask(db *gorm.DB, pid uint64, uid uint32) (int64, error) {
-	db = db.Debug().Model(&Task{}).Where("id = ? and user_id = ?", pid, uid).Take(&Task{}).Delete(&Task{})
+func (t *Task) DeleteATask(db *gorm.DB, tid uint64, uid uint32) (int64, error) {
+	db = db.Debug().Model(&Task{}).Where("id = ? and user_id = ?", tid, uid).Take(&Task{}).Delete(&Task{})
 
 	if db.Error != nil {
 		if gorm.IsRecordNotFoundError(db.Error) {

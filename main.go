@@ -1,12 +1,7 @@
-// Application which greets you.
 package main
 
-import "fmt"
+import "github.com/PixDale/sh-code-challenge/api"
 
 func main() {
-	fmt.Println(greet())
-}
-
-func greet() string {
-	return "Hi!"
+	api.Run()
 }

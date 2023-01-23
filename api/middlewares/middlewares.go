@@ -4,26 +4,23 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/PixDale/sh-code-challenge/api/auth"
 	"github.com/PixDale/sh-code-challenge/api/responses"
 )
 
 // SetMiddlewareJSON defines a middleware to set the content type of a request to JSON
-func SetMiddlewareJSON(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		next(w, r)
-	}
+func SetMiddlewareJSON(c *fiber.Ctx) error {
+	c.Set("Content-Type", "application/json")
+	return c.Next()
 }
 
 // SetMiddlewareAuthentication defines a middleware to verify the integrity of the token within the request
-func SetMiddlewareAuthentication(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		err := auth.TokenValid(r)
-		if err != nil {
-			responses.ERROR(w, http.StatusUnauthorized, errors.New("Unauthorized"))
-			return
-		}
-		next(w, r)
+func SetMiddlewareAuthentication(c *fiber.Ctx) error {
+	err := auth.TokenValid(c)
+	if err != nil {
+		return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(http.StatusUnauthorized))}})
 	}
+	return c.Next()
 }

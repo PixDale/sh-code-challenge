@@ -17,7 +17,7 @@ type User struct {
 	Name      string    `gorm:"size:255;not null;unique" json:"name"`
 	Email     string    `gorm:"size:100;not null;unique" json:"email"`
 	Password  string    `gorm:"size:100;not null;" json:"password"`
-	Role      uint      `gorm:"not null" json:"role"`
+	Role      uint32    `gorm:"not null" json:"role"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
