@@ -1,9 +1,7 @@
 package auth
 
 import (
-	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -11,6 +9,8 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
+
+	"github.com/PixDale/sh-code-challenge/api/responses"
 )
 
 // BearerTokenSize represents the size of a slice containing a header bearer token
@@ -39,8 +39,8 @@ func TokenValid(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		Pretty(claims)
+	if _, ok := token.Claims.(jwt.MapClaims); !ok || !token.Valid {
+		return responses.ErrorFailParseClaims
 	}
 	return nil
 }
@@ -79,13 +79,48 @@ func ExtractTokenID(c *fiber.Ctx) (uint32, error) {
 	return 0, nil
 }
 
-// Pretty display the claims nicely in the terminal
-func Pretty(data interface{}) {
-	b, err := json.MarshalIndent(data, "", " ")
+// HasRoleManager checks if the given token has a Manager Role
+func HasRoleManager(c *fiber.Ctx) bool {
+	tokenString := ExtractToken(c)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(os.Getenv("API_SECRET")), nil
+	})
 	if err != nil {
-		log.Println(err)
-		return
+		return false
 	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if ok && token.Valid {
+		role, err := strconv.ParseUint(fmt.Sprintf("%.0f", claims["role"]), 10, 32)
+		if err != nil {
+			return false
+		}
+		return uint32(role) == ManagerRole
+	}
+	return false
+}
 
-	fmt.Println(string(b))
+// HasRoleTechnician checks if the given token has a Technician Role
+func HasRoleTechnician(c *fiber.Ctx) bool {
+	tokenString := ExtractToken(c)
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(os.Getenv("API_SECRET")), nil
+	})
+	if err != nil {
+		return false
+	}
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if ok && token.Valid {
+		role, err := strconv.ParseUint(fmt.Sprintf("%.0f", claims["role"]), 10, 32)
+		if err != nil {
+			return false
+		}
+		return uint32(role) == TechnicianRole
+	}
+	return false
 }

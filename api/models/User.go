@@ -10,6 +10,8 @@ import (
 	"github.com/badoux/checkmail"
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/PixDale/sh-code-challenge/api/responses"
 )
 
 type User struct {
@@ -119,7 +121,7 @@ func (u *User) FindUserByID(db *gorm.DB, uid uint32) (*User, error) {
 		return &User{}, err
 	}
 	if gorm.IsRecordNotFoundError(err) {
-		return &User{}, errors.New("User Not Found")
+		return &User{}, responses.ErrorUserNotFound
 	}
 	return u, err
 }

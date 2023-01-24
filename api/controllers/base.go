@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"log"
+	"time"
 
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 
@@ -11,6 +12,8 @@ import (
 
 	"github.com/PixDale/sh-code-challenge/api/models"
 )
+
+const requestTimeout = 10 * time.Second
 
 type Server struct {
 	DB     *gorm.DB

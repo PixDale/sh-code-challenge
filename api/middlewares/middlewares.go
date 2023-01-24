@@ -20,7 +20,7 @@ func SetMiddlewareJSON(c *fiber.Ctx) error {
 func SetMiddlewareAuthentication(c *fiber.Ctx) error {
 	err := auth.TokenValid(c)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(http.StatusUnauthorized))}})
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(fiber.StatusUnauthorized)).Error()}})
 	}
 	return c.Next()
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 
@@ -16,111 +15,154 @@ import (
 	"github.com/PixDale/sh-code-challenge/api/utils/formaterror"
 )
 
+// CreateTask implements the handler for the POST method of /tasks endpoint
 func (server *Server) CreateTask(c *fiber.Ctx) error {
-	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	task := models.Task{}
 	defer cancel()
 
 	if err := c.BodyParser(&task); err != nil {
-		return c.Status(http.StatusBadRequest).JSON(responses.UserResponse{Status: http.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
 
 	task.Prepare()
 	if validationErr := task.Validate(); validationErr != nil {
-		return c.Status(http.StatusBadRequest).JSON(responses.UserResponse{Status: http.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": validationErr.Error()}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": validationErr.Error()}})
 	}
 
 	uid, err := auth.ExtractTokenID(c)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New("failed to read authorization token").Error()}})
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorFailReadToken.Error()}})
 	}
 	if uid != task.UserID {
-		return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(http.StatusUnauthorized))}})
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(fiber.StatusUnauthorized)).Error()}})
 	}
 	taskCreated, err := task.SaveTask(server.DB)
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
-		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": formattedError}})
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": formattedError.Error()}})
 	}
-	return c.Status(http.StatusCreated).JSON(responses.UserResponse{Status: http.StatusCreated, Message: "success", Data: &fiber.Map{"data": taskCreated}})
+	return c.Status(fiber.StatusCreated).JSON(responses.UserResponse{Status: fiber.StatusCreated, Message: "success", Data: &fiber.Map{"data": taskCreated}})
 }
 
+// GetTasks implements the handler for the GET method of /tasks endpoint.
+// In case the given token contains the ManagerRole, it returns a list with all tasks.
+// In case the given token contains the TechnicianRole, it returns a list of tasks created by this user
 func (server *Server) GetTasks(c *fiber.Ctx) error {
-	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	task := models.Task{}
 	defer cancel()
+	var tasks *[]models.Task
+	var err error
 
-	tasks, err := task.FindAllTasks(server.DB)
-	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+	switch {
+	case auth.HasRoleManager(c):
+		tasks, err = task.FindAllTasks(server.DB)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		}
+	case auth.HasRoleTechnician(c):
+		uid, err := auth.ExtractTokenID(c)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorFailReadUserID.Error()}})
+		}
+		tasks, err = task.FindAllTasksByUserID(server.DB, uid)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		}
+	default:
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(fiber.StatusUnauthorized)).Error()}})
 	}
 
-	return c.Status(http.StatusOK).JSON(
-		responses.UserResponse{Status: http.StatusOK, Message: "success", Data: &fiber.Map{"data": tasks}},
+	// Decrypt summaries of tasks
+	for _, t := range *tasks {
+		t.DecryptSummary()
+	}
+
+	return c.Status(fiber.StatusOK).JSON(
+		responses.UserResponse{Status: fiber.StatusOK, Message: "success", Data: &fiber.Map{"data": tasks}},
 	)
 }
 
 func (server *Server) GetTask(c *fiber.Ctx) error {
-	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	taskID := c.Params("taskId")
 	defer cancel()
 
 	tid, err := strconv.ParseUint(taskID, 10, 64)
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(responses.UserResponse{Status: http.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
 	task := models.Task{}
 	taskReceived, err := task.FindTaskByID(server.DB, tid)
 	if err != nil {
-		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
-	return c.Status(http.StatusOK).JSON(responses.UserResponse{Status: http.StatusOK, Message: "success", Data: &fiber.Map{"data": taskReceived}})
+
+	switch {
+	case auth.HasRoleManager(c):
+		break
+	case auth.HasRoleTechnician(c):
+		uid, err := auth.ExtractTokenID(c)
+		if err != nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorFailReadToken.Error()}})
+		}
+		if uid != taskReceived.UserID {
+			return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorUserNotAuthorized.Error()}})
+		}
+	}
+
+	// Decrypt Summary of task
+	taskReceived.DecryptSummary()
+	return c.Status(fiber.StatusOK).JSON(responses.UserResponse{Status: fiber.StatusOK, Message: "success", Data: &fiber.Map{"data": taskReceived}})
 }
 
 func (server *Server) UpdateTask(c *fiber.Ctx) error {
-	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	taskID := c.Params("taskId")
 	defer cancel()
 
 	// Check if the task id is valid
 	tid, err := strconv.ParseUint(taskID, 10, 64)
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(responses.UserResponse{Status: http.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
 
 	// Check if the auth token is valid and  get the user id from it
 	uid, err := auth.ExtractTokenID(c)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New("failed to read authorization token").Error()}})
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorFailReadToken.Error()}})
 	}
 
 	// Check if the task exist
 	task := models.Task{}
 	err = server.DB.Debug().Model(models.Task{}).Where("id = ?", tid).Take(&task).Error
 	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(responses.UserResponse{Status: http.StatusNotFound, Message: "error", Data: &fiber.Map{"data": errors.New("task not found")}})
+		return c.Status(fiber.StatusNotFound).JSON(responses.UserResponse{Status: fiber.StatusNotFound, Message: "error", Data: &fiber.Map{"data": responses.ErrorTaskNotFound.Error()}})
 	}
 
-	// If a user attempt to update a task not belonging to him
-	if uid != task.UserID {
-		return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New("user not authorized").Error()}})
+	switch {
+	case auth.HasRoleManager(c):
+		break
+	case auth.HasRoleTechnician(c):
+		// If a user attempt to update a task not belonging to him
+		if uid != task.UserID {
+			return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorUserNotAuthorized.Error()}})
+		}
+	default:
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorUserNotAuthorized.Error()}})
 	}
 
 	taskUpdate := models.Task{}
 	// Read the task data
-	if err := c.BodyParser(&taskUpdate); err != nil {
-		return c.Status(http.StatusUnprocessableEntity).JSON(responses.UserResponse{Status: http.StatusUnprocessableEntity, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+	if err = c.BodyParser(&taskUpdate); err != nil {
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(responses.UserResponse{Status: fiber.StatusUnprocessableEntity, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
-
-	// Also check if the request user id is equal to the one gotten from token
-	// if uid != taskUpdate.UserID {
-	// 	return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New("unauthorized").Error()}})
-	// }
 
 	taskUpdate.Prepare()
 	err = taskUpdate.Validate()
 	if err != nil {
-		return c.Status(http.StatusUnprocessableEntity).JSON(responses.UserResponse{Status: http.StatusUnprocessableEntity, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(responses.UserResponse{Status: fiber.StatusUnprocessableEntity, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
 
 	taskUpdate.ID = task.ID // this is important to tell the model the task id to update, the other update field are set above
@@ -128,45 +170,54 @@ func (server *Server) UpdateTask(c *fiber.Ctx) error {
 	taskUpdated, err := taskUpdate.UpdateATask(server.DB)
 	if err != nil {
 		formattedError := formaterror.FormatError(err.Error())
-		return c.Status(http.StatusInternalServerError).JSON(responses.UserResponse{Status: http.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": formattedError}})
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": formattedError.Error()}})
 	}
-	return c.Status(http.StatusOK).JSON(responses.UserResponse{Status: http.StatusOK, Message: "success", Data: &fiber.Map{"data": taskUpdated}})
+	return c.Status(fiber.StatusOK).JSON(responses.UserResponse{Status: fiber.StatusOK, Message: "success", Data: &fiber.Map{"data": taskUpdated}})
 }
 
 func (server *Server) DeleteTask(c *fiber.Ctx) error {
-	_, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	taskID := c.Params("taskId")
 	defer cancel()
 
 	// Is a valid task id given?
 	tid, err := strconv.ParseUint(taskID, 10, 64)
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(responses.UserResponse{Status: http.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
 
 	// Is this user authenticated?
 	uid, err := auth.ExtractTokenID(c)
 	if err != nil {
-		return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New("unauthorized").Error()}})
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(fiber.StatusUnauthorized)).Error()}})
 	}
 
 	// Check if the task exist
 	task := models.Task{}
 	err = server.DB.Debug().Model(models.Task{}).Where("id = ?", tid).Take(&task).Error
 	if err != nil {
-		return c.Status(http.StatusNotFound).JSON(responses.UserResponse{Status: http.StatusNotFound, Message: "error", Data: &fiber.Map{"data": errors.New("Task not found")}})
+		return c.Status(fiber.StatusNotFound).JSON(responses.UserResponse{Status: fiber.StatusNotFound, Message: "error", Data: &fiber.Map{"data": responses.ErrorTaskNotFound.Error()}})
 	}
 
-	// Is the authenticated user, the owner of this task?
-	if uid != task.UserID {
-		return c.Status(http.StatusUnauthorized).JSON(responses.UserResponse{Status: http.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New("unauthorized").Error()}})
+	switch {
+	case auth.HasRoleManager(c):
+		break
+	case auth.HasRoleTechnician(c):
+		// Is the authenticated user, the owner of this task?
+		if uid != task.UserID {
+			return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(fiber.StatusUnauthorized)).Error()}})
+		}
+
+	default:
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorUserNotAuthorized.Error()}})
 	}
+
 	_, err = task.DeleteATask(server.DB, tid, uid)
 	if err != nil {
-		return c.Status(http.StatusBadRequest).JSON(responses.UserResponse{Status: http.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
 
-	return c.Status(http.StatusNoContent).JSON(
-		responses.UserResponse{Status: http.StatusNoContent, Message: "success", Data: &fiber.Map{"data": fmt.Sprintf("Task %d successfully deleted!", tid)}},
+	return c.Status(fiber.StatusNoContent).JSON(
+		responses.UserResponse{Status: fiber.StatusNoContent, Message: "success", Data: &fiber.Map{"data": fmt.Sprintf("Task %d successfully deleted!", tid)}},
 	)
 }

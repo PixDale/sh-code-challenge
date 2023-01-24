@@ -3,16 +3,22 @@ package models
 import (
 	"errors"
 	"html"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
+
+	"github.com/PixDale/sh-code-challenge/api/responses"
+	"github.com/PixDale/sh-code-challenge/api/utils/encryption"
 )
+
+const MaxSummarySize = 2500
 
 type Task struct {
 	ID        uint64    `gorm:"primary_key;auto_increment" json:"id"`
-	Summary   string    `gorm:"size:2500;not null" json:"summary"`
-	User      User      `json:user`
+	Summary   string    `gorm:"not null" json:"summary"`
+	User      User      `json:"user"`
 	UserID    uint32    `gorm:"not null" json:"user_id"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
@@ -21,6 +27,13 @@ type Task struct {
 func (t *Task) Prepare() {
 	t.ID = 0
 	t.Summary = html.EscapeString(strings.TrimSpace(t.Summary))
+
+	// Truncates summary if it is longer than the maximum allowed
+	if len(t.Summary) > MaxSummarySize {
+		t.Summary = t.Summary[:MaxSummarySize]
+	}
+	// Encrypts data, since it may contains personal information
+	t.EncryptSummary()
 	t.User = User{}
 	t.CreatedAt = time.Now()
 	t.UpdatedAt = time.Now()
@@ -28,10 +41,10 @@ func (t *Task) Prepare() {
 
 func (t *Task) Validate() error {
 	if t.Summary == "" {
-		return errors.New("Required Summary")
+		return errors.New("required Summary")
 	}
 	if t.UserID < 1 {
-		return errors.New("Required User")
+		return errors.New("required User")
 	}
 	return nil
 }
@@ -124,9 +137,17 @@ func (t *Task) DeleteATask(db *gorm.DB, tid uint64, uid uint32) (int64, error) {
 
 	if db.Error != nil {
 		if gorm.IsRecordNotFoundError(db.Error) {
-			return 0, errors.New("Task not found")
+			return 0, responses.ErrorTaskNotFound
 		}
 		return 0, db.Error
 	}
 	return db.RowsAffected, nil
+}
+
+func (t *Task) EncryptSummary() {
+	t.Summary = string(encryption.EncryptData([]byte(t.Summary), os.Getenv("ENCRYPTION_KEY")))
+}
+
+func (t *Task) DecryptSummary() {
+	t.Summary = string(encryption.DecryptData([]byte(t.Summary), os.Getenv("ENCRYPTION_KEY")))
 }
