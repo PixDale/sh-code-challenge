@@ -86,9 +86,9 @@ func (server *Server) GetTasks(c *fiber.Ctx) error {
 
 func (server *Server) GetTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	taskID := c.Params("id")
 	defer cancel()
 
+	taskID := c.Params("id")
 	tid, err := strconv.ParseUint(taskID, 10, 64)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})

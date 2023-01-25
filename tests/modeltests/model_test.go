@@ -37,7 +37,7 @@ func Database() {
 	server.DB, err = gorm.Open(TestDBDriver, DBURL)
 	if err != nil {
 		fmt.Println(DBURL)
-		fmt.Printf("Cannot connect to %s database\n", TestDBDriver)
+		fmt.Printf("Cannot connect to %s database: %s\n", TestDBDriver, err.Error())
 		log.Fatal("This is the error:", err)
 	} else {
 		fmt.Printf("We are connected to the %s database\n", TestDBDriver)

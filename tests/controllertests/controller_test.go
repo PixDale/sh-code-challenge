@@ -33,10 +33,11 @@ func Database() {
 	var err error
 	TestDBDriver := "mysql"
 
-	DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", os.Getenv("TestDbUser"), os.Getenv("TestDbPassword"), os.Getenv("TestDbHost"), os.Getenv("TestDbPort"), os.Getenv("TestDbName"))
+	DBURL := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8&parseTime=True&loc=Local", os.Getenv("TEST_DB_USER"), os.Getenv("TEST_DB_PASSWORD"), os.Getenv("TEST_DB_HOST"), os.Getenv("TEST_DB_PORT"), os.Getenv("TEST_DB_NAME"))
 	server.DB, err = gorm.Open(TestDBDriver, DBURL)
 	if err != nil {
-		fmt.Printf("Cannot connect to %s database\n", TestDBDriver)
+		fmt.Println(DBURL)
+		fmt.Printf("Cannot connect to %s database: %s\n", TestDBDriver, err.Error())
 		log.Fatal("This is the error:", err)
 	} else {
 		fmt.Printf("We are connected to the %s database\n", TestDBDriver)
@@ -45,6 +46,7 @@ func Database() {
 
 func refreshUserTable() error {
 	log.Println("Before drop table")
+
 	err := server.DB.DropTableIfExists(&models.User{}).Error
 	if err != nil {
 		return err
@@ -54,7 +56,7 @@ func refreshUserTable() error {
 	if err != nil {
 		return err
 	}
-	log.Println("Successfully refreshed table")
+	log.Println("Successfully refreshed user table")
 	return nil
 }
 

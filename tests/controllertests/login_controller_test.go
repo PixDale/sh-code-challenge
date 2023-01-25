@@ -110,13 +110,12 @@ func TestLogin(t *testing.T) {
 	}
 
 	for _, v := range samples {
-
 		req, err := http.NewRequest("POST", "/login", bytes.NewBufferString(v.inputJSON))
 		if err != nil {
 			t.Errorf("this is the error: %v", err)
 		}
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.Login))
+		handler := adaptor.FiberHandlerFunc(server.Login)
 		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, rr.Code, v.statusCode)

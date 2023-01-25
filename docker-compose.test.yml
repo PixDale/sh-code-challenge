@@ -9,7 +9,8 @@ services:
     volumes:
       - api_test:/app/src/app/
     depends_on:
-      - mysql_test
+      mysql_test:
+        condition: service_healthy
     networks:
       - fullstack_test
 
@@ -22,13 +23,19 @@ services:
     environment: 
       - MYSQL_DATABASE=${TEST_DB_NAME}
       - MYSQL_USER=${TEST_DB_USER}
-      - MYSQL_PASSWORD=${TEST_DB_PASSWORD}
       - MYSQL_ROOT_PASSWORD=${TEST_DB_PASSWORD}
+      - MYSQL_PASSWORD=${TEST_DB_PASSWORD}
       - DATABASE_HOST=${TEST_DB_HOST} 
     volumes:
       - database_mysql_test:/var/lib/mysql
     networks:
       - fullstack_test
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 2s
+      timeout: 20s
+      retries: 10
+      
   
 volumes:
   api_test:

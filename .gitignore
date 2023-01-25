@@ -35,6 +35,3 @@ dist/
 # GoLand and IntelliJ IDEA files
 .idea/
 
-# env files that usually contain secrets or local config
-.env
-.envrc

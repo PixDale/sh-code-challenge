@@ -140,11 +140,11 @@ func TestGetTasks(t *testing.T) {
 		t.Errorf("this is the error: %v\n", err)
 	}
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.GetTasks))
+	handler := adaptor.FiberHandlerFunc(server.GetTasks)
 	handler.ServeHTTP(rr, req)
 
 	var tasks []models.Task
-	err = json.Unmarshal([]byte(rr.Body.String()), &tasks)
+	err = json.Unmarshal([]byte(rr.Body.Bytes()), &tasks)
 
 	assert.Equal(t, rr.Code, http.StatusOK)
 	assert.Equal(t, len(tasks), 2)
@@ -179,7 +179,6 @@ func TestGetTaskByID(t *testing.T) {
 		},
 	}
 	for _, v := range taskSample {
-
 		req, err := http.NewRequest("GET", "/tasks", nil)
 		if err != nil {
 			t.Errorf("this is the error: %v\n", err)
@@ -190,7 +189,7 @@ func TestGetTaskByID(t *testing.T) {
 		req.URL.RawQuery = q.Encode()
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.GetTask))
+		handler := adaptor.FiberHandlerFunc(server.GetTask)
 		handler.ServeHTTP(rr, req)
 
 		responseMap := make(map[string]interface{})
