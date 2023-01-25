@@ -86,7 +86,7 @@ func (server *Server) GetTasks(c *fiber.Ctx) error {
 
 func (server *Server) GetTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	taskID := c.Params("taskId")
+	taskID := c.Params("id")
 	defer cancel()
 
 	tid, err := strconv.ParseUint(taskID, 10, 64)
@@ -119,7 +119,7 @@ func (server *Server) GetTask(c *fiber.Ctx) error {
 
 func (server *Server) UpdateTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	taskID := c.Params("taskId")
+	taskID := c.Params("id")
 	defer cancel()
 
 	// Check if the task id is valid
@@ -177,7 +177,7 @@ func (server *Server) UpdateTask(c *fiber.Ctx) error {
 
 func (server *Server) DeleteTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	taskID := c.Params("taskId")
+	taskID := c.Params("id")
 	defer cancel()
 
 	// Is a valid task id given?

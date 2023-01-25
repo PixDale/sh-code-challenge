@@ -61,14 +61,14 @@ func (server *Server) GetUsers(c *fiber.Ctx) error {
 
 func (server *Server) GetUser(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	userId := c.Params("userId")
+	userID := c.Params("id")
 	defer cancel()
 
 	if !auth.HasRoleManager(c) {
 		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": errors.New(http.StatusText(fiber.StatusUnauthorized)).Error()}})
 	}
 
-	uid, err := strconv.ParseUint(userId, 10, 32)
+	uid, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
@@ -82,10 +82,10 @@ func (server *Server) GetUser(c *fiber.Ctx) error {
 
 func (server *Server) UpdateUser(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	userId := c.Params("userId")
+	userID := c.Params("id")
 	defer cancel()
 
-	uid, err := strconv.ParseUint(userId, 10, 32)
+	uid, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
@@ -127,10 +127,10 @@ func (server *Server) UpdateUser(c *fiber.Ctx) error {
 
 func (server *Server) DeleteUser(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	userId := c.Params("userId")
+	userID := c.Params("id")
 	defer cancel()
 
-	uid, err := strconv.ParseUint(userId, 10, 32)
+	uid, err := strconv.ParseUint(userID, 10, 32)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
