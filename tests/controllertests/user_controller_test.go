@@ -2,6 +2,7 @@ package controllertests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -49,7 +50,7 @@ func TestCreateUser(t *testing.T) {
 		{
 			inputJSON:    `{"nickname":"Kan", "email": "kangmail.com", "password": "password"}`,
 			statusCode:   422,
-			errorMessage: "Invalid Email",
+			errorMessage: "invalid email",
 		},
 		{
 			inputJSON:    `{"nickname": "", "email": "kan@gmail.com", "password": "password"}`,
@@ -59,27 +60,30 @@ func TestCreateUser(t *testing.T) {
 		{
 			inputJSON:    `{"nickname": "Kan", "email": "", "password": "password"}`,
 			statusCode:   422,
-			errorMessage: "Required Email",
+			errorMessage: "required email",
 		},
 		{
 			inputJSON:    `{"nickname": "Kan", "email": "kan@gmail.com", "password": ""}`,
 			statusCode:   422,
-			errorMessage: "Required Password",
+			errorMessage: "required password",
 		},
 	}
 
 	for _, v := range samples {
 
-		req, err := http.NewRequest("POST", "/users", bytes.NewBufferString(v.inputJSON))
+		req, err := http.NewRequestWithContext(context.Background(), "POST", "/users", bytes.NewBufferString(v.inputJSON))
 		if err != nil {
 			t.Errorf("this is the error: %v", err)
 		}
+		req.Header.Set("Content-Type", "application/json")
+		bearer := "Bearer " + managerTokenJWT
+		req.Header.Add("Authorization", bearer)
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.CreateUser))
+		handler := adaptor.FiberHandlerFunc(server.CreateUser)
 		handler.ServeHTTP(rr, req)
 
 		responseMap := make(map[string]interface{})
-		err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+		err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
 		if err != nil {
 			fmt.Printf("Cannot convert to json: %v", err)
 		}
@@ -103,16 +107,18 @@ func TestGetUsers(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	req, err := http.NewRequest("GET", "/users", nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", "/users", nil)
 	if err != nil {
 		t.Errorf("this is the error: %v\n", err)
 	}
+	bearer := "Bearer " + managerTokenJWT
+	req.Header.Add("Authorization", bearer)
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.GetUsers))
+	handler := adaptor.FiberHandlerFunc(server.GetUsers)
 	handler.ServeHTTP(rr, req)
 
 	var users []models.User
-	err = json.Unmarshal([]byte(rr.Body.String()), &users)
+	err = json.Unmarshal(rr.Body.Bytes(), &users)
 	if err != nil {
 		log.Fatalf("Cannot convert to json: %v\n", err)
 	}
@@ -149,21 +155,23 @@ func TestGetUserByID(t *testing.T) {
 	}
 	for _, v := range userSample {
 
-		req, err := http.NewRequest("GET", "/users", nil)
+		req, err := http.NewRequestWithContext(context.Background(), "GET", "/users", nil)
 		if err != nil {
 			t.Errorf("This is the error: %v\n", err)
 		}
+		bearer := "Bearer " + managerTokenJWT
+		req.Header.Add("Authorization", bearer)
 
 		q := req.URL.Query()
 		q.Add("id", v.id)
 		req.URL.RawQuery = q.Encode()
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.GetUser))
+		handler := adaptor.FiberHandlerFunc(server.GetUser)
 		handler.ServeHTTP(rr, req)
 
 		responseMap := make(map[string]interface{})
-		err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+		err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
 		if err != nil {
 			log.Fatalf("Cannot convert to json: %v", err)
 		}
@@ -230,7 +238,7 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"nickname":"Woman", "email": "woman@gmail.com", "password": ""}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
-			errorMessage: "Required Password",
+			errorMessage: "required password",
 		},
 		{
 			// When no token was passed
@@ -269,7 +277,7 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"nickname":"Kan", "email": "kangmail.com", "password": "password"}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
-			errorMessage: "Invalid Email",
+			errorMessage: "invalid email",
 		},
 		{
 			id:           strconv.Itoa(int(AuthID)),
@@ -283,7 +291,7 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"nickname": "Kan", "email": "", "password": "password"}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
-			errorMessage: "Required Email",
+			errorMessage: "required email",
 		},
 		{
 			id:         "unknwon",
@@ -302,24 +310,27 @@ func TestUpdateUser(t *testing.T) {
 
 	for _, v := range samples {
 
-		req, err := http.NewRequest("POST", "/users", bytes.NewBufferString(v.updateJSON))
+		req, err := http.NewRequestWithContext(context.Background(), "POST", "/users", bytes.NewBufferString(v.updateJSON))
 		if err != nil {
 			t.Errorf("This is the error: %v\n", err)
 		}
+		req.Header.Set("Content-Type", "application/json")
+		bearer := "Bearer " + managerTokenJWT
+		req.Header.Add("Authorization", bearer)
 
 		q := req.URL.Query()
 		q.Add("id", v.id)
 		req.URL.RawQuery = q.Encode()
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.UpdateUser))
+		handler := adaptor.FiberHandlerFunc(server.UpdateUser)
 
 		req.Header.Set("Authorization", v.tokenGiven)
 
 		handler.ServeHTTP(rr, req)
 
 		responseMap := make(map[string]interface{})
-		err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+		err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
 		if err != nil {
 			t.Errorf("Cannot convert to json: %v", err)
 		}
@@ -405,17 +416,19 @@ func TestDeleteUser(t *testing.T) {
 	}
 	for _, v := range userSample {
 
-		req, err := http.NewRequest("GET", "/users", nil)
+		req, err := http.NewRequestWithContext(context.Background(), "GET", "/users", nil)
 		if err != nil {
 			t.Errorf("This is the error: %v\n", err)
 		}
+		bearer := "Bearer " + managerTokenJWT
+		req.Header.Add("Authorization", bearer)
 
 		q := req.URL.Query()
 		q.Add("id", v.id)
 		req.URL.RawQuery = q.Encode()
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.DeleteUser))
+		handler := adaptor.FiberHandlerFunc(server.DeleteUser)
 
 		req.Header.Set("Authorization", v.tokenGiven)
 
@@ -424,7 +437,7 @@ func TestDeleteUser(t *testing.T) {
 
 		if v.statusCode == 401 && v.errorMessage != "" {
 			responseMap := make(map[string]interface{})
-			err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+			err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
 			if err != nil {
 				t.Errorf("Cannot convert to json: %v", err)
 			}

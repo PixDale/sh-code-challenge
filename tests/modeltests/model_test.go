@@ -9,6 +9,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 
+	"github.com/PixDale/sh-code-challenge/api/auth"
 	"github.com/PixDale/sh-code-challenge/api/controllers"
 	"github.com/PixDale/sh-code-challenge/api/models"
 )
@@ -40,7 +41,7 @@ func Database() {
 		fmt.Printf("Cannot connect to %s database: %s\n", TestDBDriver, err.Error())
 		log.Fatal("This is the error:", err)
 	} else {
-		fmt.Printf("We are connected to the %s database\n", TestDBDriver)
+		fmt.Printf("[ModelTest] We are connected to the %s database\n", TestDBDriver)
 	}
 }
 
@@ -58,7 +59,10 @@ func refreshUserTable() error {
 }
 
 func seedOneUser() (models.User, error) {
-	refreshUserTable()
+	err := refreshUserTable()
+	if err != nil {
+		return models.User{}, err
+	}
 
 	user := models.User{
 		Name:     "Felipe Galdino",
@@ -66,9 +70,10 @@ func seedOneUser() (models.User, error) {
 		Password: "password",
 	}
 
-	err := server.DB.Model(&models.User{}).Create(&user).Error
+	err = server.DB.Model(&models.User{}).Create(&user).Error
 	if err != nil {
 		log.Fatalf("cannot seed users table: %v", err)
+		return models.User{}, err
 	}
 	return user, nil
 }
@@ -79,11 +84,13 @@ func seedUsers() error {
 			Name:     "David Cossette",
 			Email:    "david.cossette@gmail.com",
 			Password: "password",
+			Role:     auth.ManagerRole,
 		},
 		{
 			Name:     "Mary Robbins",
 			Email:    "mary.robbins@gmail.com",
 			Password: "password",
+			Role:     auth.TechnicianRole,
 		},
 	}
 
@@ -145,11 +152,13 @@ func seedUsersAndTasks() ([]models.User, []models.Task, error) {
 			Name:     "David Cossette",
 			Email:    "david.cossette@gmail.com",
 			Password: "password",
+			Role:     auth.ManagerRole,
 		},
 		{
 			Name:     "Mary Robbins",
 			Email:    "mary.robbins@gmail.com",
 			Password: "password",
+			Role:     auth.TechnicianRole,
 		},
 	}
 	tasks := []models.Task{

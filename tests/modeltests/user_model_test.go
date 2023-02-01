@@ -6,6 +6,7 @@ import (
 
 	_ "github.com/jinzhu/gorm/dialects/mysql" // mysql driver
 
+	"github.com/PixDale/sh-code-challenge/api/auth"
 	"github.com/PixDale/sh-code-challenge/api/models"
 
 	"gopkg.in/go-playground/assert.v1"
@@ -40,7 +41,9 @@ func TestSaveUser(t *testing.T) {
 		Email:    "test@gmail.com",
 		Name:     "test",
 		Password: "password",
+		Role:     auth.ManagerRole,
 	}
+
 	savedUser, err := newUser.SaveUser(server.DB)
 	if err != nil {
 		t.Errorf("this is the error getting the users: %v\n", err)

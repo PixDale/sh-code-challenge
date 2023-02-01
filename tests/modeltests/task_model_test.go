@@ -3,6 +3,7 @@ package modeltests
 import (
 	"log"
 	"testing"
+	"time"
 
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	"gopkg.in/go-playground/assert.v1"
@@ -114,4 +115,21 @@ func TestDeleteATask(t *testing.T) {
 
 	// Can be done this way too
 	assert.Equal(t, isDeleted, int64(1))
+}
+
+func TestEncryptAndDecryptSummary(t *testing.T) {
+	task := models.Task{
+		ID:        0,
+		Summary:   "Task Decrypted",
+		User:      models.User{},
+		UserID:    0,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+
+	t.Logf("Summary before encryption: %s\n", task.Summary)
+	task.EncryptSummary()
+	t.Logf("Summary after encryption: %s\n", task.Summary)
+	task.DecryptSummary()
+	t.Logf("Summary after decryption: %s\n", task.Summary)
 }

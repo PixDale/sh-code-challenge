@@ -2,8 +2,10 @@ package controllertests
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -13,8 +15,12 @@ import (
 	"gopkg.in/go-playground/assert.v1"
 
 	"github.com/gofiber/adaptor/v2"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/utils"
 
+	"github.com/PixDale/sh-code-challenge/api/middlewares"
 	"github.com/PixDale/sh-code-challenge/api/models"
+	"github.com/PixDale/sh-code-challenge/api/responses"
 )
 
 func TestCreateTask(t *testing.T) {
@@ -22,105 +28,89 @@ func TestCreateTask(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	user, err := seedOneUser()
-	if err != nil {
-		log.Fatalf("Cannot seed user %v\n", err)
-	}
-	token, err := server.SignIn(user.Email, "password") // Note the password in the database is already hashed, we want unhashed
-	if err != nil {
-		log.Fatalf("cannot login: %v\n", err)
-	}
-	tokenString := fmt.Sprintf("Bearer %v", token)
+
+	Authenticate()
 
 	samples := []struct {
 		inputJSON    string
 		statusCode   int
-		title        string
-		content      string
-		author_id    uint32
+		summary      string
+		userID       uint32
 		tokenGiven   string
 		errorMessage string
 	}{
 		{
-			inputJSON:    `{"title":"The title", "content": "the content", "author_id": 1}`,
+			inputJSON:    fmt.Sprintf("{\"summary\": \"The title\", \"user_id\": %d}", managerUser.ID),
 			statusCode:   201,
-			tokenGiven:   tokenString,
-			title:        "The title",
-			content:      "the content",
-			author_id:    user.ID,
+			summary:      "The title",
+			userID:       managerUser.ID,
+			tokenGiven:   managerTokenJWT,
 			errorMessage: "",
 		},
 		{
-			inputJSON:    `{"title":"The title", "content": "the content", "author_id": 1}`,
-			statusCode:   500,
-			tokenGiven:   tokenString,
-			errorMessage: "Title Already Taken",
-		},
-		{
 			// When no token is passed
-			inputJSON:    `{"title":"When no token is passed", "content": "the content", "author_id": 1}`,
+			inputJSON:    fmt.Sprintf("{\"summary\": \"When no token is passed\", \"user_id\": %d}", managerUser.ID),
 			statusCode:   401,
 			tokenGiven:   "",
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 		{
 			// When incorrect token is passed
-			inputJSON:    `{"title":"When incorrect token is passed", "content": "the content", "author_id": 1}`,
-			statusCode:   401,
-			tokenGiven:   "This is an incorrect token",
-			errorMessage: "Unauthorized",
+			inputJSON:  fmt.Sprintf("{\"summary\": \"When incorrect token is passed\", \"user_id\": %d}", managerUser.ID),
+			statusCode: 401,
+
+			tokenGiven:   "incorrect token",
+			errorMessage: "error",
 		},
 		{
-			inputJSON:    `{"title": "", "content": "The content", "author_id": 1}`,
+			inputJSON:    fmt.Sprintf("{\"summary\": \"\", \"user_id\": %d}", managerUser.ID),
 			statusCode:   422,
-			tokenGiven:   tokenString,
-			errorMessage: "Required Title",
+			tokenGiven:   managerTokenJWT,
+			errorMessage: "error",
 		},
 		{
-			inputJSON:    `{"title": "This is a title", "content": "", "author_id": 1}`,
-			statusCode:   422,
-			tokenGiven:   tokenString,
-			errorMessage: "Required Summary",
-		},
-		{
-			inputJSON:    `{"title": "This is an awesome title", "content": "the content"}`,
-			statusCode:   422,
-			tokenGiven:   tokenString,
-			errorMessage: "Required Author",
+			inputJSON:    `{"summary": "This is an awesome title"}`,
+			statusCode:   400,
+			tokenGiven:   managerTokenJWT,
+			errorMessage: "error",
 		},
 		{
 			// When user 2 uses user 1 token
-			inputJSON:    `{"title": "This is an awesome title", "content": "the content", "author_id": 2}`,
+			inputJSON:    fmt.Sprintf("{\"summary\": \"This is an awesome title\", \"user_id\": %d}", managerUser.ID),
 			statusCode:   401,
-			tokenGiven:   tokenString,
-			errorMessage: "Unauthorized",
+			tokenGiven:   technicianTokenJWT,
+			errorMessage: "error",
 		},
 	}
 	for _, v := range samples {
-
-		req, err := http.NewRequest("POST", "/tasks", bytes.NewBufferString(v.inputJSON))
+		req, err := http.NewRequestWithContext(context.Background(), "POST", "/tasks", bytes.NewBufferString(v.inputJSON))
 		if err != nil {
 			t.Errorf("this is the error: %v\n", err)
 		}
+		req.Header.Set("Content-Type", "application/json")
+		bearer := "Bearer " + v.tokenGiven
+		req.Header.Add("Authorization", bearer)
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.CreateTask))
-
-		req.Header.Set("Authorization", v.tokenGiven)
+		handler := adaptor.FiberHandlerFunc(server.CreateTask)
 		handler.ServeHTTP(rr, req)
 
-		responseMap := make(map[string]interface{})
-		err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+		// responseMap := make(map[string]interface{})
+		responseStruct := responses.UserResponse{}
+		err = json.Unmarshal(rr.Body.Bytes(), &responseStruct)
 		if err != nil {
 			fmt.Printf("Cannot convert to json: %v", err)
 		}
 		assert.Equal(t, rr.Code, v.statusCode)
 		if v.statusCode == 201 {
-			assert.Equal(t, responseMap["title"], v.title)
-			assert.Equal(t, responseMap["content"], v.content)
-			assert.Equal(t, responseMap["author_id"], float64(v.author_id)) // just for both ids to have the same type
+			responseTask := (*responseStruct.Data)["data"].(map[string]interface{})
+			tsk := models.Task{}
+			tsk.Summary = responseTask["summary"].(string)
+			tsk.UserID = uint32(responseTask["user_id"].(float64))
+			assert.Equal(t, tsk.Summary, v.summary)
+			assert.Equal(t, tsk.UserID, v.userID) // just for both ids to have the same type
 		}
 		if v.statusCode == 401 || v.statusCode == 422 || v.statusCode == 500 && v.errorMessage != "" {
-			assert.Equal(t, responseMap["error"], v.errorMessage)
+			assert.Equal(t, responseStruct.Message, v.errorMessage)
 		}
 	}
 }
@@ -130,23 +120,32 @@ func TestGetTasks(t *testing.T) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	Authenticate()
 	_, _, err = seedUsersAndTasks()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	req, err := http.NewRequest("GET", "/tasks", nil)
+	req, err := http.NewRequestWithContext(context.Background(), "GET", "/tasks", nil)
 	if err != nil {
 		t.Errorf("this is the error: %v\n", err)
 	}
+	bearer := "Bearer " + managerTokenJWT
+	req.Header.Add("Authorization", bearer)
 	rr := httptest.NewRecorder()
 	handler := adaptor.FiberHandlerFunc(server.GetTasks)
 	handler.ServeHTTP(rr, req)
 
-	var tasks []models.Task
-	err = json.Unmarshal([]byte(rr.Body.Bytes()), &tasks)
+	responseStruct := responses.UserResponse{}
+	err = json.Unmarshal(rr.Body.Bytes(), &responseStruct)
+	if err != nil {
+		t.Errorf("this is the error: %v\n", err)
+	}
 
 	assert.Equal(t, rr.Code, http.StatusOK)
+
+	tasks := (*responseStruct.Data)["data"].([]interface{})
 	assert.Equal(t, len(tasks), 2)
 }
 
@@ -162,46 +161,63 @@ func TestGetTaskByID(t *testing.T) {
 	taskSample := []struct {
 		id           string
 		statusCode   int
-		title        string
-		content      string
-		author_id    uint32
+		summary      string
+		userID       uint32
 		errorMessage string
 	}{
 		{
 			id:         strconv.Itoa(int(task.ID)),
 			statusCode: 200,
-			content:    task.Summary,
-			author_id:  task.UserID,
+			summary:    task.Summary,
+			userID:     task.UserID,
 		},
 		{
-			id:         "unknwon",
+			id:         "unknown",
 			statusCode: 400,
 		},
 	}
 	for _, v := range taskSample {
-		req, err := http.NewRequest("GET", "/tasks", nil)
+		app := fiber.New()
+		app.Get("/tasks/:id", middlewares.SetMiddlewareJSON, middlewares.SetMiddlewareAuthentication, server.GetTask)
+
+		url := "/tasks/" + v.id
+		req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
 		if err != nil {
 			t.Errorf("this is the error: %v\n", err)
 		}
+		bearer := "Bearer " + managerTokenJWT
+		req.Header.Add("Authorization", bearer)
 
-		q := req.URL.Query()
-		q.Add("id", v.id)
-		req.URL.RawQuery = q.Encode()
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Errorf("failed to make the request: %v\n", err.Error())
+		}
 
-		rr := httptest.NewRecorder()
-		handler := adaptor.FiberHandlerFunc(server.GetTask)
-		handler.ServeHTTP(rr, req)
-
-		responseMap := make(map[string]interface{})
-		err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+		responseStruct := responses.UserResponse{}
+		respBodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Errorf("failed to read response body: %v\n", err.Error())
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			t.Errorf("failed to close body: %v\n", err.Error())
+		}
+		err = json.Unmarshal(respBodyBytes, &responseStruct)
 		if err != nil {
 			log.Fatalf("Cannot convert to json: %v", err)
 		}
-		assert.Equal(t, rr.Code, v.statusCode)
+
+		utils.AssertEqual(t, v.statusCode, resp.StatusCode)
 
 		if v.statusCode == 200 {
-			assert.Equal(t, task.Summary, responseMap["content"])
-			assert.Equal(t, float64(task.UserID), responseMap["author_id"]) // the response author id is float64
+			task.DecryptSummary()
+			responseTask := (*responseStruct.Data)["data"].(map[string]interface{})
+			tsk := models.Task{}
+			tsk.Summary = responseTask["summary"].(string)
+			tsk.UserID = uint32(responseTask["user_id"].(float64))
+
+			assert.Equal(t, task.Summary, tsk.Summary)
+			assert.Equal(t, task.UserID, tsk.UserID) // the response author id is float64
 		}
 	}
 }
@@ -242,118 +258,115 @@ func TestUpdateTask(t *testing.T) {
 		AuthTaskID = task.ID
 		AuthTaskUserID = task.UserID
 	}
-	// fmt.Printf("this is the auth task: %v\n", AuthTaskID)
+	fmt.Println("tttttttttttttttttttttttttttttt", token)
 
 	samples := []struct {
 		id           string
 		updateJSON   string
 		statusCode   int
-		title        string
-		content      string
-		author_id    uint32
+		summary      string
+		userID       uint32
 		tokenGiven   string
 		errorMessage string
 	}{
 		{
 			// Convert int64 to int first before converting to string
 			id:           strconv.Itoa(int(AuthTaskID)),
-			updateJSON:   `{"title":"The updated task", "content": "This is the updated content", "author_id": 1}`,
+			updateJSON:   `{"summary":"The updated task", "user_id": 1}`,
 			statusCode:   200,
-			title:        "The updated task",
-			content:      "This is the updated content",
-			author_id:    AuthTaskUserID,
+			summary:      "The updated task",
+			userID:       AuthTaskUserID,
 			tokenGiven:   tokenString,
 			errorMessage: "",
 		},
 		{
 			// When no token is provided
 			id:           strconv.Itoa(int(AuthTaskID)),
-			updateJSON:   `{"title":"This is still another title", "content": "This is the updated content", "author_id": 1}`,
+			updateJSON:   `{"summary":"This is still another title", "user_id": 1}`,
 			tokenGiven:   "",
 			statusCode:   401,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 		{
 			// When incorrect token is provided
 			id:           strconv.Itoa(int(AuthTaskID)),
-			updateJSON:   `{"title":"This is still another title", "content": "This is the updated content", "author_id": 1}`,
+			updateJSON:   `{"summary":"This is still another title", "user_id": 1}`,
 			tokenGiven:   "this is an incorrect token",
 			statusCode:   401,
-			errorMessage: "Unauthorized",
-		},
-		{
-			// Note: "Title 2" belongs to task 2, and title must be unique
-			id:           strconv.Itoa(int(AuthTaskID)),
-			updateJSON:   `{"title":"Title 2", "content": "This is the updated content", "author_id": 1}`,
-			statusCode:   500,
-			tokenGiven:   tokenString,
-			errorMessage: "Title Already Taken",
+			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthTaskID)),
-			updateJSON:   `{"title":"", "content": "This is the updated content", "author_id": 1}`,
+			updateJSON:   `{"summary":"", "user_id": 1}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
-			errorMessage: "Required Title",
+			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthTaskID)),
-			updateJSON:   `{"title":"Awesome title", "content": "", "author_id": 1}`,
-			statusCode:   422,
-			tokenGiven:   tokenString,
-			errorMessage: "Required Summary",
-		},
-		{
-			id:           strconv.Itoa(int(AuthTaskID)),
-			updateJSON:   `{"title":"This is another title", "content": "This is the updated content"}`,
+			updateJSON:   `{"summary":"This is another title"}`,
 			statusCode:   401,
 			tokenGiven:   tokenString,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 		{
-			id:         "unknwon",
+			id:         "unknown",
 			statusCode: 400,
 		},
 		{
 			id:           strconv.Itoa(int(AuthTaskID)),
-			updateJSON:   `{"title":"This is still another title", "content": "This is the updated content", "author_id": 2}`,
+			updateJSON:   `{"summary":"This is still another title", "user_id": 2}`,
 			tokenGiven:   tokenString,
 			statusCode:   401,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 	}
 
 	for _, v := range samples {
+		app := fiber.New()
+		app.Put("/tasks/:id", middlewares.SetMiddlewareJSON, middlewares.SetMiddlewareAuthentication, server.UpdateTask)
 
-		req, err := http.NewRequest("POST", "/tasks", bytes.NewBufferString(v.updateJSON))
+		url := "/tasks/" + v.id
+		req, err := http.NewRequestWithContext(context.Background(), "PUT", url, bytes.NewBufferString(v.updateJSON))
 		if err != nil {
 			t.Errorf("this is the error: %v\n", err)
 		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Add("Authorization", v.tokenGiven)
 
-		q := req.URL.Query()
-		q.Add("id", v.id)
-		req.URL.RawQuery = q.Encode()
-
-		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.UpdateTask))
-
-		req.Header.Set("Authorization", v.tokenGiven)
-
-		handler.ServeHTTP(rr, req)
-
-		responseMap := make(map[string]interface{})
-		err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+		resp, err := app.Test(req)
 		if err != nil {
-			t.Errorf("Cannot convert to json: %v", err)
+			t.Errorf("failed to make the request: %v\n", err.Error())
 		}
-		assert.Equal(t, rr.Code, v.statusCode)
+
+		responseStruct := responses.UserResponse{}
+		respBodyBytes, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			t.Errorf("failed to read response body: %v\n", err.Error())
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			t.Errorf("failed to close body: %v\n", err.Error())
+		}
+		fmt.Printf("aaaaaaaaaaaaaaaaaaaaaa %s\n", string(respBodyBytes))
+		err = json.Unmarshal(respBodyBytes, &responseStruct)
+		if err != nil {
+			log.Fatalf("Cannot convert to json: %v", err)
+		}
+
+		utils.AssertEqual(t, v.statusCode, resp.StatusCode, "Status Code")
+
 		if v.statusCode == 200 {
-			assert.Equal(t, responseMap["title"], v.title)
-			assert.Equal(t, responseMap["content"], v.content)
-			assert.Equal(t, responseMap["author_id"], float64(v.author_id)) // just to match the type of the json we receive thats why we used float64
+			responseTask := (*responseStruct.Data)["data"].(map[string]interface{})
+			tsk := models.Task{}
+			tsk.Summary = responseTask["summary"].(string)
+			tsk.UserID = uint32(responseTask["user_id"].(float64))
+
+			assert.Equal(t, tsk.Summary, v.summary)
+			assert.Equal(t, tsk.UserID, v.userID) // just to match the type of the json we receive thats why we used float64
 		}
 		if v.statusCode == 401 || v.statusCode == 422 || v.statusCode == 500 && v.errorMessage != "" {
-			assert.Equal(t, responseMap["error"], v.errorMessage)
+			assert.Equal(t, responseStruct.Message, v.errorMessage)
 		}
 	}
 }
@@ -438,14 +451,13 @@ func TestDeleteTask(t *testing.T) {
 		},
 	}
 	for _, v := range taskSample {
-
-		req, _ := http.NewRequest("GET", "/tasks", nil)
+		req, _ := http.NewRequest("DELETE", "/tasks", nil)
 		q := req.URL.Query()
 		q.Add("id", v.id)
 		req.URL.RawQuery = q.Encode()
 
 		rr := httptest.NewRecorder()
-		handler := http.HandlerFunc(adaptor.FiberHandlerFunc(server.DeleteTask))
+		handler := adaptor.FiberHandlerFunc(server.DeleteTask)
 
 		req.Header.Set("Authorization", v.tokenGiven)
 
@@ -456,7 +468,7 @@ func TestDeleteTask(t *testing.T) {
 		if v.statusCode == 401 && v.errorMessage != "" {
 
 			responseMap := make(map[string]interface{})
-			err = json.Unmarshal([]byte(rr.Body.String()), &responseMap)
+			err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
 			if err != nil {
 				t.Errorf("Cannot convert to json: %v", err)
 			}

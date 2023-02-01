@@ -17,7 +17,7 @@ const MaxSummarySize = 2500
 
 type Task struct {
 	ID        uint64    `gorm:"primary_key;auto_increment" json:"id"`
-	Summary   string    `gorm:"not null" json:"summary"`
+	Summary   string    `gorm:"type:text;not null" json:"summary"`
 	User      User      `json:"user"`
 	UserID    uint32    `gorm:"not null" json:"user_id"`
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
@@ -40,7 +40,7 @@ func (t *Task) Prepare() {
 }
 
 func (t *Task) Validate() error {
-	if t.Summary == "" {
+	if t.Summary == "" || t.Summary == "AAAAAAAAAAAAAAAAAAAAAA==" {
 		return errors.New("required Summary")
 	}
 	if t.UserID < 1 {
@@ -145,9 +145,13 @@ func (t *Task) DeleteATask(db *gorm.DB, tid uint64, uid uint32) (int64, error) {
 }
 
 func (t *Task) EncryptSummary() {
-	t.Summary = string(encryption.EncryptData([]byte(t.Summary), os.Getenv("ENCRYPTION_KEY")))
+	if t != nil {
+		t.Summary = encryption.EncryptData(t.Summary, os.Getenv("ENCRYPTION_KEY"))
+	}
 }
 
 func (t *Task) DecryptSummary() {
-	t.Summary = string(encryption.DecryptData([]byte(t.Summary), os.Getenv("ENCRYPTION_KEY")))
+	if t != nil {
+		t.Summary = encryption.DecryptData(t.Summary, os.Getenv("ENCRYPTION_KEY"))
+	}
 }

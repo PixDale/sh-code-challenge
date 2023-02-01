@@ -42,6 +42,7 @@ func (server *Server) CreateTask(c *fiber.Ctx) error {
 		formattedError := formaterror.FormatError(err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": formattedError.Error()}})
 	}
+	taskCreated.DecryptSummary()
 	return c.Status(fiber.StatusCreated).JSON(responses.UserResponse{Status: fiber.StatusCreated, Message: "success", Data: &fiber.Map{"data": taskCreated}})
 }
 
@@ -87,7 +88,7 @@ func (server *Server) GetTasks(c *fiber.Ctx) error {
 func (server *Server) GetTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
-
+	fmt.Printf("ppppppppppppppppppppp %+v\n", c)
 	taskID := c.Params("id")
 	tid, err := strconv.ParseUint(taskID, 10, 64)
 	if err != nil {
@@ -160,6 +161,7 @@ func (server *Server) UpdateTask(c *fiber.Ctx) error {
 	}
 
 	taskUpdate.Prepare()
+	fmt.Println("bbbbbbbbbbbb", taskUpdate.Summary)
 	err = taskUpdate.Validate()
 	if err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(responses.UserResponse{Status: fiber.StatusUnprocessableEntity, Message: "error", Data: &fiber.Map{"data": err.Error()}})
@@ -172,6 +174,7 @@ func (server *Server) UpdateTask(c *fiber.Ctx) error {
 		formattedError := formaterror.FormatError(err.Error())
 		return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": formattedError.Error()}})
 	}
+	taskUpdated.DecryptSummary()
 	return c.Status(fiber.StatusOK).JSON(responses.UserResponse{Status: fiber.StatusOK, Message: "success", Data: &fiber.Map{"data": taskUpdated}})
 }
 

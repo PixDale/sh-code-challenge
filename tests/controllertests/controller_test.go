@@ -5,18 +5,24 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/joho/godotenv"
 
+	"github.com/PixDale/sh-code-challenge/api/auth"
 	"github.com/PixDale/sh-code-challenge/api/controllers"
 	"github.com/PixDale/sh-code-challenge/api/models"
 )
 
 var (
-	server       = controllers.Server{}
-	userInstance = models.User{}
-	taskInstance = models.Task{}
+	server             = controllers.Server{}
+	userInstance       = models.User{}
+	taskInstance       = models.Task{}
+	managerTokenJWT    = ""
+	technicianTokenJWT = ""
+	managerUser        = models.User{}
+	technicianUser     = models.User{}
 )
 
 func TestMain(m *testing.M) {
@@ -25,6 +31,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Error getting env %v\n", err)
 	}
 	Database()
+	Authenticate()
 
 	os.Exit(m.Run())
 }
@@ -40,18 +47,60 @@ func Database() {
 		fmt.Printf("Cannot connect to %s database: %s\n", TestDBDriver, err.Error())
 		log.Fatal("This is the error:", err)
 	} else {
-		fmt.Printf("We are connected to the %s database\n", TestDBDriver)
+		fmt.Printf("[ControllerTest] We are connected to the %s database\n", TestDBDriver)
+	}
+}
+
+func Authenticate() {
+	err := refreshUserTable()
+	if err != nil {
+		log.Fatal("Failed to refresh user table:", err.Error())
+	}
+	userPass := "123"
+	managerUser = models.User{
+		Name:      "Felipe Galdino",
+		Email:     "felipegaldino16@gmail.com",
+		Password:  userPass,
+		Role:      auth.ManagerRole,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	managerUser.Prepare()
+	_, err = managerUser.SaveUser(server.DB)
+	if err != nil {
+		log.Fatal("Failed to create manager user:", err.Error())
+	}
+
+	managerTokenJWT, err = server.SignIn(managerUser.Email, userPass)
+	if err != nil {
+		log.Fatal("Failed to obtain an authentication token:", err.Error())
+	}
+
+	technicianUser = models.User{
+		Name:      "PixDale",
+		Email:     "pixdale@pixdale.com",
+		Password:  userPass,
+		Role:      auth.TechnicianRole,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	technicianUser.Prepare()
+	_, err = technicianUser.SaveUser(server.DB)
+	if err != nil {
+		log.Fatal("Failed to create technician user:", err.Error())
+	}
+
+	technicianTokenJWT, err = server.SignIn(technicianUser.Email, userPass)
+	if err != nil {
+		log.Fatal("Failed to obtain an authentication token:", err.Error())
 	}
 }
 
 func refreshUserTable() error {
-	log.Println("Before drop table")
-
 	err := server.DB.DropTableIfExists(&models.User{}).Error
 	if err != nil {
 		return err
 	}
-	log.Println("Before migrate")
 	err = server.DB.AutoMigrate(&models.User{}).Error
 	if err != nil {
 		return err
@@ -71,7 +120,7 @@ func seedOneUser() (models.User, error) {
 		Email:    "pet@gmail.com",
 		Password: "password",
 	}
-
+	user.Prepare()
 	err = server.DB.Model(&models.User{}).Create(&user).Error
 	if err != nil {
 		return models.User{}, err
@@ -127,6 +176,7 @@ func seedOneUserAndOneTask() (models.Task, error) {
 		Name:     "Sam Phil",
 		Email:    "sam@gmail.com",
 		Password: "password",
+		Role:     auth.ManagerRole,
 	}
 	err = server.DB.Model(&models.User{}).Create(&user).Error
 	if err != nil {
@@ -136,6 +186,7 @@ func seedOneUserAndOneTask() (models.Task, error) {
 		Summary: "This is the content sam",
 		UserID:  user.ID,
 	}
+	task.EncryptSummary()
 	err = server.DB.Model(&models.Task{}).Create(&task).Error
 	if err != nil {
 		return models.Task{}, err
@@ -146,19 +197,18 @@ func seedOneUserAndOneTask() (models.Task, error) {
 func seedUsersAndTasks() ([]models.User, []models.Task, error) {
 	var err error
 
-	if err != nil {
-		return []models.User{}, []models.Task{}, err
-	}
 	users := []models.User{
 		{
-			Name:     "Steven victor",
-			Email:    "steven@gmail.com",
+			Name:     "David Cossette",
+			Email:    "david.cossette@gmail.com",
 			Password: "password",
+			Role:     auth.ManagerRole,
 		},
 		{
-			Name:     "Magu Frank",
-			Email:    "magu@gmail.com",
+			Name:     "Mary Robbins",
+			Email:    "mary.robbins@gmail.com",
 			Password: "password",
+			Role:     auth.TechnicianRole,
 		},
 	}
 	tasks := []models.Task{
@@ -176,6 +226,7 @@ func seedUsersAndTasks() ([]models.User, []models.Task, error) {
 			log.Fatalf("cannot seed users table: %v", err)
 		}
 		tasks[i].UserID = users[i].ID
+		tasks[i].EncryptSummary()
 
 		err = server.DB.Model(&models.Task{}).Create(&tasks[i]).Error
 		if err != nil {
