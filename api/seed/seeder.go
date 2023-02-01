@@ -32,13 +32,13 @@ var users = []models.User{
 
 var tasks = []models.Task{
 	{
-		Summary: "Hello world 1",
+		Summary: "Hello world 4",
 	},
 	{
-		Summary: "Hello world 2",
+		Summary: "Hello world 5",
 	},
 	{
-		Summary: "Hello world 3",
+		Summary: "Hello world 6",
 	},
 }
 
@@ -63,6 +63,7 @@ func Load(db *gorm.DB) {
 			log.Fatalf("cannot seed users table: %v", err)
 		}
 		tasks[i].UserID = users[i].ID
+		tasks[i].EncryptSummary()
 
 		err = db.Debug().Model(&models.Task{}).Create(&tasks[i]).Error
 		if err != nil {
