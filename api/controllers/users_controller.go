@@ -30,12 +30,13 @@ func (server *Server) CreateUser(c *fiber.Ctx) error {
 
 	user.Prepare()
 	if validationErr := user.Validate(""); validationErr != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(responses.UserResponse{Status: fiber.StatusBadRequest, Message: "error", Data: &fiber.Map{"data": validationErr.Error()}})
+		return c.Status(fiber.StatusUnprocessableEntity).JSON(responses.UserResponse{Status: fiber.StatusUnprocessableEntity, Message: "error", Data: &fiber.Map{"data": validationErr.Error()}})
 	}
 
 	userCreated, err := user.SaveUser(server.DB)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": err.Error()}})
+		formattedError := formaterror.FormatError(err.Error())
+		return c.Status(fiber.StatusInternalServerError).JSON(responses.UserResponse{Status: fiber.StatusInternalServerError, Message: "error", Data: &fiber.Map{"data": formattedError.Error()}})
 	}
 	return c.Status(fiber.StatusCreated).JSON(responses.UserResponse{Status: fiber.StatusCreated, Message: "success", Data: &fiber.Map{"data": userCreated}})
 }

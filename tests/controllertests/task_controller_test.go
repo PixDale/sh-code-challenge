@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -194,7 +194,7 @@ func TestGetTaskByID(t *testing.T) {
 		}
 
 		responseStruct := responses.UserResponse{}
-		respBodyBytes, err := ioutil.ReadAll(resp.Body)
+		respBodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Errorf("failed to read response body: %v\n", err.Error())
 		}
@@ -340,7 +340,7 @@ func TestUpdateTask(t *testing.T) {
 		}
 
 		responseStruct := responses.UserResponse{}
-		respBodyBytes, err := ioutil.ReadAll(resp.Body)
+		respBodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			t.Errorf("failed to read response body: %v\n", err.Error())
 		}
@@ -470,7 +470,7 @@ func TestDeleteTask(t *testing.T) {
 
 		if v.statusCode == 401 && v.errorMessage != "" {
 			responseStruct := responses.UserResponse{}
-			respBodyBytes, err := ioutil.ReadAll(resp.Body)
+			respBodyBytes, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Errorf("failed to read response body: %v\n", err.Error())
 			}

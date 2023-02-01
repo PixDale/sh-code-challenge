@@ -17,8 +17,6 @@ import (
 
 var (
 	server             = controllers.Server{}
-	userInstance       = models.User{}
-	taskInstance       = models.Task{}
 	managerTokenJWT    = ""
 	technicianTokenJWT = ""
 	managerUser        = models.User{}
@@ -233,5 +231,5 @@ func seedUsersAndTasks() ([]models.User, []models.Task, error) {
 			log.Fatalf("cannot seed tasks table: %v", err)
 		}
 	}
-	return users, tasks, nil
+	return users, tasks, err
 }
