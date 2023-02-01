@@ -4,9 +4,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/md5"
-	"crypto/rand"
+	"encoding/base64"
 	"encoding/hex"
-	"io"
 )
 
 // CreateHash creates a MD5 sum from the encryption key
@@ -17,36 +16,35 @@ func CreateHash(key string) string {
 }
 
 // EncryptData encrypts a slice of bytes using a passphrase
-func EncryptData(data []byte, passphrase string) []byte {
+func EncryptData(data string, passphrase string) string {
 	block, _ := aes.NewCipher([]byte(CreateHash(passphrase)))
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		panic(err.Error())
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err = io.ReadFull(rand.Reader, nonce); err != nil {
-		panic(err.Error())
-	}
-	ciphertext := gcm.Seal(nonce, nonce, data, nil)
-	return ciphertext
+	ciphertext := make([]byte, aes.BlockSize+len(data))
+	iv := ciphertext[:aes.BlockSize]
+	cfb := cipher.NewCFBEncrypter(block, iv)
+	cfb.XORKeyStream(ciphertext[aes.BlockSize:], []byte(data))
+
+	// Encode the ciphertext to Base64
+	encodedCiphertext := base64.StdEncoding.EncodeToString(ciphertext)
+	return encodedCiphertext
 }
 
 // DecryptData decrypts a slice of bytes using a passphrase
-func DecryptData(data []byte, passphrase string) []byte {
+func DecryptData(encodedCiphertext string, passphrase string) string {
 	key := []byte(CreateHash(passphrase))
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		panic(err.Error())
 	}
-	gcm, err := cipher.NewGCM(block)
+
+	// Decode the Base64 encoded ciphertext
+	ciphertext, err := base64.StdEncoding.DecodeString(encodedCiphertext)
 	if err != nil {
 		panic(err.Error())
 	}
-	nonceSize := gcm.NonceSize()
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		panic(err.Error())
-	}
-	return plaintext
+
+	plaintext := make([]byte, len(ciphertext)-aes.BlockSize)
+	iv := ciphertext[:aes.BlockSize]
+	cfb := cipher.NewCFBDecrypter(block, iv)
+	cfb.XORKeyStream(plaintext, ciphertext[aes.BlockSize:])
+	return string(plaintext)
 }
