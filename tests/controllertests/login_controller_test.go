@@ -49,7 +49,6 @@ func TestSignIn(t *testing.T) {
 	}
 
 	for _, v := range samples {
-		t.Logf("[TestSignIn] Trying to login with email: %s and password: %s\n", v.email, v.password)
 		token, err := server.SignIn(v.email, v.password)
 		if err != nil {
 			assert.Equal(t, err, errors.New(v.errorMessage))
@@ -134,7 +133,6 @@ func TestLogin(t *testing.T) {
 			if err != nil {
 				t.Errorf("Cannot convert to json: %v", err)
 			}
-			fmt.Println(responseMap["data"].(map[string]interface{})["data"])
 			assert.Equal(t, responseMap["data"].(map[string]interface{})["data"], v.errorMessage)
 		}
 	}

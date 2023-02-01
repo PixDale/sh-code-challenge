@@ -126,10 +126,6 @@ func TestEncryptAndDecryptSummary(t *testing.T) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-
-	t.Logf("Summary before encryption: %s\n", task.Summary)
 	task.EncryptSummary()
-	t.Logf("Summary after encryption: %s\n", task.Summary)
 	task.DecryptSummary()
-	t.Logf("Summary after decryption: %s\n", task.Summary)
 }

@@ -88,7 +88,6 @@ func (server *Server) GetTasks(c *fiber.Ctx) error {
 func (server *Server) GetTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
-	fmt.Printf("ppppppppppppppppppppp %+v\n", c)
 	taskID := c.Params("id")
 	tid, err := strconv.ParseUint(taskID, 10, 64)
 	if err != nil {
@@ -142,26 +141,25 @@ func (server *Server) UpdateTask(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(responses.UserResponse{Status: fiber.StatusNotFound, Message: "error", Data: &fiber.Map{"data": responses.ErrorTaskNotFound.Error()}})
 	}
 
-	switch {
-	case auth.HasRoleManager(c):
-		break
-	case auth.HasRoleTechnician(c):
-		// If a user attempt to update a task not belonging to him
-		if uid != task.UserID {
-			return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorUserNotAuthorized.Error()}})
-		}
-	default:
-		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorUserNotAuthorized.Error()}})
-	}
-
 	taskUpdate := models.Task{}
 	// Read the task data
 	if err = c.BodyParser(&taskUpdate); err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(responses.UserResponse{Status: fiber.StatusUnprocessableEntity, Message: "error", Data: &fiber.Map{"data": err.Error()}})
 	}
 
+	switch {
+	case auth.HasRoleManager(c):
+		break
+	case auth.HasRoleTechnician(c):
+		// If a user attempt to update a task not belonging to him
+		if uid != task.UserID || uid != taskUpdate.UserID {
+			return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorUserNotAuthorized.Error()}})
+		}
+	default:
+		return c.Status(fiber.StatusUnauthorized).JSON(responses.UserResponse{Status: fiber.StatusUnauthorized, Message: "error", Data: &fiber.Map{"data": responses.ErrorUserNotAuthorized.Error()}})
+	}
+
 	taskUpdate.Prepare()
-	fmt.Println("bbbbbbbbbbbb", taskUpdate.Summary)
 	err = taskUpdate.Validate()
 	if err != nil {
 		return c.Status(fiber.StatusUnprocessableEntity).JSON(responses.UserResponse{Status: fiber.StatusUnprocessableEntity, Message: "error", Data: &fiber.Map{"data": err.Error()}})

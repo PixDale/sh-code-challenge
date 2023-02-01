@@ -202,13 +202,13 @@ func seedUsersAndTasks() ([]models.User, []models.Task, error) {
 			Name:     "David Cossette",
 			Email:    "david.cossette@gmail.com",
 			Password: "password",
-			Role:     auth.ManagerRole,
+			Role:     auth.TechnicianRole,
 		},
 		{
 			Name:     "Mary Robbins",
 			Email:    "mary.robbins@gmail.com",
 			Password: "password",
-			Role:     auth.TechnicianRole,
+			Role:     auth.ManagerRole,
 		},
 	}
 	tasks := []models.Task{

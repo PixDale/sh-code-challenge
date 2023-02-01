@@ -258,7 +258,6 @@ func TestUpdateTask(t *testing.T) {
 		AuthTaskID = task.ID
 		AuthTaskUserID = task.UserID
 	}
-	fmt.Println("tttttttttttttttttttttttttttttt", token)
 
 	samples := []struct {
 		id           string
@@ -310,8 +309,9 @@ func TestUpdateTask(t *testing.T) {
 			errorMessage: "error",
 		},
 		{
-			id:         "unknown",
-			statusCode: 400,
+			id:           "unknown",
+			statusCode:   401,
+			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthTaskID)),
@@ -348,7 +348,6 @@ func TestUpdateTask(t *testing.T) {
 		if err != nil {
 			t.Errorf("failed to close body: %v\n", err.Error())
 		}
-		fmt.Printf("aaaaaaaaaaaaaaaaaaaaaa %s\n", string(respBodyBytes))
 		err = json.Unmarshal(respBodyBytes, &responseStruct)
 		if err != nil {
 			log.Fatalf("Cannot convert to json: %v", err)
@@ -409,7 +408,7 @@ func TestDeleteTask(t *testing.T) {
 	}
 	taskSample := []struct {
 		id           string
-		author_id    uint32
+		userID       uint32
 		tokenGiven   string
 		statusCode   int
 		errorMessage string
@@ -417,7 +416,7 @@ func TestDeleteTask(t *testing.T) {
 		{
 			// Convert int64 to int first before converting to string
 			id:           strconv.Itoa(int(AuthTaskID)),
-			author_id:    TaskUserID,
+			userID:       TaskUserID,
 			tokenGiven:   tokenString,
 			statusCode:   204,
 			errorMessage: "",
@@ -425,54 +424,65 @@ func TestDeleteTask(t *testing.T) {
 		{
 			// When empty token is passed
 			id:           strconv.Itoa(int(AuthTaskID)),
-			author_id:    TaskUserID,
+			userID:       TaskUserID,
 			tokenGiven:   "",
 			statusCode:   401,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 		{
 			// When incorrect token is passed
 			id:           strconv.Itoa(int(AuthTaskID)),
-			author_id:    TaskUserID,
+			userID:       TaskUserID,
 			tokenGiven:   "This is an incorrect token",
 			statusCode:   401,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 		{
-			id:         "unknwon",
-			tokenGiven: tokenString,
-			statusCode: 400,
+			id:           "unknown",
+			tokenGiven:   tokenString,
+			statusCode:   400,
+			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(1)),
-			author_id:    1,
+			userID:       1,
 			statusCode:   401,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 	}
 	for _, v := range taskSample {
-		req, _ := http.NewRequest("DELETE", "/tasks", nil)
-		q := req.URL.Query()
-		q.Add("id", v.id)
-		req.URL.RawQuery = q.Encode()
+		app := fiber.New()
+		app.Delete("/tasks/:id", middlewares.SetMiddlewareJSON, middlewares.SetMiddlewareAuthentication, server.DeleteTask)
 
-		rr := httptest.NewRecorder()
-		handler := adaptor.FiberHandlerFunc(server.DeleteTask)
-
+		url := "/tasks/" + v.id
+		req, err := http.NewRequestWithContext(context.Background(), "DELETE", url, nil)
+		if err != nil {
+			t.Errorf("this is the error: %v\n", err)
+		}
 		req.Header.Set("Authorization", v.tokenGiven)
 
-		handler.ServeHTTP(rr, req)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Errorf("failed to make the request: %v\n", err.Error())
+		}
 
-		assert.Equal(t, rr.Code, v.statusCode)
+		utils.AssertEqual(t, v.statusCode, resp.StatusCode, "Status Code")
 
 		if v.statusCode == 401 && v.errorMessage != "" {
-
-			responseMap := make(map[string]interface{})
-			err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
+			responseStruct := responses.UserResponse{}
+			respBodyBytes, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				t.Errorf("Cannot convert to json: %v", err)
+				t.Errorf("failed to read response body: %v\n", err.Error())
 			}
-			assert.Equal(t, responseMap["error"], v.errorMessage)
+			err = resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close body: %v\n", err.Error())
+			}
+			err = json.Unmarshal(respBodyBytes, &responseStruct)
+			if err != nil {
+				log.Fatalf("Cannot convert to json: %v", err)
+			}
+			assert.Equal(t, responseStruct.Message, v.errorMessage)
 		}
 	}
 }

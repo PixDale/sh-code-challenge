@@ -41,10 +41,10 @@ func (t *Task) Prepare() {
 
 func (t *Task) Validate() error {
 	if t.Summary == "" || t.Summary == "AAAAAAAAAAAAAAAAAAAAAA==" {
-		return errors.New("required Summary")
+		return errors.New("required summary")
 	}
 	if t.UserID < 1 {
-		return errors.New("required User")
+		return errors.New("required user")
 	}
 	return nil
 }
