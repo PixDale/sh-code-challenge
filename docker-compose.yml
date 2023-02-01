@@ -9,12 +9,13 @@ services:
     volumes:
       - api:/usr/src/app/
     depends_on:
-      - fullstack-mysql
+      fullstack-mysql:
+        condition: service_healthy
     networks:
       - fullstack
 
   fullstack-mysql:
-    image: mysql
+    image: mysql:8.0.31
     container_name: full_db_mysql
     ports:
       - 3306:3306
@@ -28,6 +29,11 @@ services:
       - database_mysql:/var/lib/mysql
     networks:
       - fullstack
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 2s
+      timeout: 20s
+      retries: 10
 
   phpmyadmin:
     image: phpmyadmin
