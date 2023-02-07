@@ -8,14 +8,18 @@ services:
     restart: on-failure
     volumes:
       - api:/usr/src/app/
+    environment:
+      - AMQP_SERVER_URL=amqp://guest:guest@message-broker:5672/
     depends_on:
       fullstack-mysql:
+        condition: service_healthy
+      message-broker:
         condition: service_healthy
     networks:
       - fullstack
 
   fullstack-mysql:
-    image: mysql:8.0.31
+    image: mysql
     container_name: full_db_mysql
     ports:
       - 3306:3306
@@ -50,10 +54,48 @@ services:
     restart: always
     networks:
       - fullstack
+  
+  message-broker:
+    image: rabbitmq:3-management-alpine
+    container_name: message-broker
+    expose:
+      - 5672
+    ports:
+      #- 5672:5672 # for sender and consumer
+      - 15672:15672 # for serve RabbitMQ GUI
+    volumes:
+      - dev_rabbitmq-data/:/var/lib/rabbitmq
+      - dev_rabbitmq-log/:/var/log/rabbitmq
+    restart: always
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    networks:
+      - fullstack
+
+  notification-app:
+    container_name: notification-app
+    ports:
+      - 3000:3000
+    build:
+      context: ./notification
+      dockerfile: Dockerfile.notification
+    environment:
+      - AMQP_SERVER_URL=amqp://guest:guest@message-broker:5672/
+    restart: always
+    networks:
+      - fullstack
+    depends_on:
+      message-broker:
+        condition: service_healthy
 
 volumes:
   api:
   database_mysql:
+  dev_rabbitmq-data:
+  dev_rabbitmq-log:
 
 networks:
   fullstack:

@@ -2,13 +2,16 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/streadway/amqp"
 )
 
 func main() {
+	// Define RabbitMQ server URL.
+	amqpServerURL := os.Getenv("AMQP_SERVER_URL")
 	// Connect to RabbitMQ container
-	conn, err := amqp.Dial("amqp://guest:guest@rabbitmq:5672/")
+	conn, err := amqp.Dial(amqpServerURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
@@ -35,19 +38,19 @@ func main() {
 	}
 
 	// Publish a message
-	body := []byte("A new message")
-	err = ch.Publish(
-		"",     // exchange
-		q.Name, // routing key
-		false,  // mandatory
-		false,  // immediate
-		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        body,
-		})
-	if err != nil {
-		log.Fatalf("Failed to publish a message: %v", err)
-	}
+	// body := []byte("A new message")
+	// err = ch.Publish(
+	// 	"",     // exchange
+	// 	q.Name, // routing key
+	// 	false,  // mandatory
+	// 	false,  // immediate
+	// 	amqp.Publishing{
+	// 		ContentType: "text/plain",
+	// 		Body:        body,
+	// 	})
+	// if err != nil {
+	// 	log.Fatalf("Failed to publish a message: %v", err)
+	// }
 
 	// Receive a message
 	msgs, err := ch.Consume(
@@ -63,9 +66,10 @@ func main() {
 		log.Fatalf("Failed to register a consumer: %v", err)
 	}
 
+	log.Println("Waiting for notifications")
+
 	// Implement Notification Logic
 	for msg := range msgs {
-		log.Printf("Received a message: %s", msg.Body)
-		// Your code to send notifications
+		log.Printf("Received a notification: %s", msg.Body)
 	}
 }
