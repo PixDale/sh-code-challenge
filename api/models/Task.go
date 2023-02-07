@@ -13,17 +13,31 @@ import (
 	"github.com/PixDale/sh-code-challenge/api/utils/encryption"
 )
 
+// MaxSummarySize is a constant that represents the maximum size allowed for the summary of a task
 const MaxSummarySize = 2500
 
+// Task represents a task in the application
 type Task struct {
-	ID        uint64    `gorm:"primary_key;auto_increment" json:"id"`
-	Summary   string    `gorm:"type:text;not null" json:"summary"`
-	User      User      `json:"user"`
-	UserID    uint32    `gorm:"not null" json:"user_id"`
+	// ID is the unique identifier of the task
+	ID uint64 `gorm:"primary_key;auto_increment" json:"id"`
+
+	// Summary is a brief description of the task
+	Summary string `gorm:"type:text;not null" json:"summary"`
+
+	// User is the user who created the task
+	User User `json:"user"`
+
+	// UserID is the identifier of the user who created the task
+	UserID uint32 `gorm:"not null" json:"user_id"`
+
+	// CreatedAt is the date and time when the task was created
 	CreatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"created_at"`
+
+	// UpdatedAt is the date and time when the task was last updated
 	UpdatedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"updated_at"`
 }
 
+// Prepare performs necessary preparation before saving a task to the database
 func (t *Task) Prepare() {
 	t.ID = 0
 	t.Summary = html.EscapeString(strings.TrimSpace(t.Summary))
@@ -39,6 +53,7 @@ func (t *Task) Prepare() {
 	t.UpdatedAt = time.Now()
 }
 
+// Validate checks if the task data is valid
 func (t *Task) Validate() error {
 	if t.Summary == "" || t.Summary == "AAAAAAAAAAAAAAAAAAAAAA==" {
 		return errors.New("required summary")
@@ -49,6 +64,7 @@ func (t *Task) Validate() error {
 	return nil
 }
 
+// SaveTask saves a task to the database
 func (t *Task) SaveTask(db *gorm.DB) (*Task, error) {
 	var err error
 	err = db.Debug().Model(&Task{}).Create(&t).Error
@@ -64,6 +80,7 @@ func (t *Task) SaveTask(db *gorm.DB) (*Task, error) {
 	return t, nil
 }
 
+// FindAllTasks retrieves all tasks from the database
 func (t *Task) FindAllTasks(db *gorm.DB) (*[]Task, error) {
 	var err error
 	tasks := []Task{}
@@ -82,6 +99,7 @@ func (t *Task) FindAllTasks(db *gorm.DB) (*[]Task, error) {
 	return &tasks, nil
 }
 
+// FindTaskByID is a function to retrieve a single task from the database using the task id
 func (t *Task) FindTaskByID(db *gorm.DB, tid uint64) (*Task, error) {
 	var err error
 	err = db.Debug().Model(&Task{}).Where("id = ?", tid).Take(&t).Error
@@ -97,11 +115,11 @@ func (t *Task) FindTaskByID(db *gorm.DB, tid uint64) (*Task, error) {
 	return t, nil
 }
 
+// FindAllTasksByUserID is a function to retrieve all tasks associated with a user using the user id
 func (t *Task) FindAllTasksByUserID(db *gorm.DB, uid uint32) (*[]Task, error) {
 	var err error
 	tasks := []Task{}
 	err = db.Debug().Model(&Task{UserID: uid}).Limit(100).Find(&tasks).Error
-	// err = db.Debug().Model(&Task{}).Limit(100).Find(&tasks, Task{UserID: uid}).Error // try this if above doesn't work
 	if err != nil {
 		return &[]Task{}, err
 	}
@@ -116,6 +134,7 @@ func (t *Task) FindAllTasksByUserID(db *gorm.DB, uid uint32) (*[]Task, error) {
 	return &tasks, nil
 }
 
+// UpdateATask updates a task in the database
 func (t *Task) UpdateATask(db *gorm.DB) (*Task, error) {
 	var err error
 
@@ -132,6 +151,7 @@ func (t *Task) UpdateATask(db *gorm.DB) (*Task, error) {
 	return t, nil
 }
 
+// DeleteATask deletes a task from the database
 func (t *Task) DeleteATask(db *gorm.DB, tid uint64, uid uint32) (int64, error) {
 	db = db.Debug().Model(&Task{}).Where("id = ? and user_id = ?", tid, uid).Take(&Task{}).Delete(&Task{})
 
@@ -144,12 +164,14 @@ func (t *Task) DeleteATask(db *gorm.DB, tid uint64, uid uint32) (int64, error) {
 	return db.RowsAffected, nil
 }
 
+// EncryptSummary encrypts the summary field of the task
 func (t *Task) EncryptSummary() {
 	if t != nil {
 		t.Summary = encryption.EncryptData(t.Summary, os.Getenv("ENCRYPTION_KEY"))
 	}
 }
 
+// DecryptSummary decrypts the summary field of the task
 func (t *Task) DecryptSummary() {
 	if t != nil {
 		t.Summary = encryption.DecryptData(t.Summary, os.Getenv("ENCRYPTION_KEY"))

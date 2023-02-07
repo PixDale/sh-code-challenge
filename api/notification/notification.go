@@ -1,3 +1,4 @@
+// Package notification implements the access to RabbitMQ with the notification queue
 package notification
 
 import (
@@ -13,6 +14,7 @@ var (
 	rabbitQueue amqp.Queue
 )
 
+// Connect establishes a connection to the RabbitMQ server and creates a channel and a queue.
 func Connect() error {
 	var err error
 	// Connect to RabbitMQ container
@@ -25,7 +27,7 @@ func Connect() error {
 	// Create a channel
 	rabbitCh, err = rabbitConn.Channel()
 	if err != nil {
-		fmt.Println("Failed to open a channelinto RabbitMQ:", err.Error())
+		fmt.Println("Failed to open a channel into RabbitMQ:", err.Error())
 		return err
 	}
 
@@ -41,6 +43,7 @@ func Connect() error {
 	return err
 }
 
+// PublishNotification publishes a message to the notification queue.
 func PublishNotification(msg []byte) error {
 	err := rabbitCh.Publish(
 		"",               // exchange

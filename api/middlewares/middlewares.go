@@ -1,3 +1,4 @@
+// Package middlewares contains the middlewares used on the project
 package middlewares
 
 import (
@@ -27,6 +28,7 @@ func SetMiddlewareAuthentication(c *fiber.Ctx) error {
 	return c.Next()
 }
 
+// SetMiddlewareSendNotification defines a middleware to send a notification everytime a technician makes a request
 func SetMiddlewareSendNotification(c *fiber.Ctx) error {
 	if auth.HasRoleTechnician(c) {
 		var err error

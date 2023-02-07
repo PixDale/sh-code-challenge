@@ -1,3 +1,5 @@
+// Package seed provides seed data for the database and functions to
+// load the data into the database
 package seed
 
 import (
@@ -9,6 +11,7 @@ import (
 	"github.com/PixDale/sh-code-challenge/api/models"
 )
 
+// users is an array of User structs containing seed data for the users table
 var users = []models.User{
 	{
 		Name:     "Felipe Galdino",
@@ -30,6 +33,7 @@ var users = []models.User{
 	},
 }
 
+// tasks is an array of Task structs containing seed data for the tasks table
 var tasks = []models.Task{
 	{
 		Summary: "Hello world 4",
@@ -42,6 +46,8 @@ var tasks = []models.Task{
 	},
 }
 
+// Load is a function to load the seed data into the database
+// It takes a pointer to a gorm.DB instance as an argument
 func Load(db *gorm.DB) {
 	err := db.Debug().DropTableIfExists(&models.Task{}, &models.User{}).Error
 	if err != nil {
