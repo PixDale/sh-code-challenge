@@ -118,8 +118,8 @@ func (t *Task) FindTaskByID(db *gorm.DB, tid uint64) (*Task, error) {
 // FindAllTasksByUserID is a function to retrieve all tasks associated with a user using the user id
 func (t *Task) FindAllTasksByUserID(db *gorm.DB, uid uint32) (*[]Task, error) {
 	var err error
-	tasks := []Task{}
-	err = db.Debug().Model(&Task{UserID: uid}).Limit(100).Find(&tasks).Error
+	var tasks []Task
+	err = db.Debug().Model(&Task{}).Where("user_id = ?", uid).Limit(100).Find(&tasks).Error
 	if err != nil {
 		return &[]Task{}, err
 	}

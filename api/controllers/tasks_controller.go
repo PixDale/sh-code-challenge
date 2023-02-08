@@ -76,8 +76,8 @@ func (server *Server) GetTasks(c *fiber.Ctx) error {
 	}
 
 	// Decrypt summaries of tasks
-	for _, t := range *tasks {
-		t.DecryptSummary()
+	for i := range *tasks {
+		(*tasks)[i].DecryptSummary()
 	}
 
 	return c.Status(fiber.StatusOK).JSON(
