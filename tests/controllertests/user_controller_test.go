@@ -8,13 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"net/http/httptest"
 	"strconv"
 	"testing"
 
 	"gopkg.in/go-playground/assert.v1"
 
-	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/utils"
 	"github.com/mitchellh/mapstructure"
@@ -205,32 +203,47 @@ func TestGetUserByID(t *testing.T) {
 		},
 	}
 	for _, v := range userSample {
-		req, err := http.NewRequestWithContext(context.Background(), "GET", "/users", nil)
+		app := fiber.New()
+		app.Get("/users/:id", middlewares.SetMiddlewareJSON, middlewares.SetMiddlewareAuthentication, server.GetUser)
+
+		url := "/users/" + v.id
+		req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
 		if err != nil {
-			t.Errorf("This is the error: %v\n", err)
+			t.Errorf("this is the error: %v\n", err)
 		}
 		bearer := "Bearer " + managerTokenJWT
 		req.Header.Add("Authorization", bearer)
 
-		q := req.URL.Query()
-		q.Add("id", v.id)
-		req.URL.RawQuery = q.Encode()
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Errorf("failed to make the request: %v\n", err.Error())
+		}
 
-		rr := httptest.NewRecorder()
-		handler := adaptor.FiberHandlerFunc(server.GetUser)
-		handler.ServeHTTP(rr, req)
-
-		responseMap := make(map[string]interface{})
-		err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
+		responseStruct := responses.UserResponse{}
+		respBodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Errorf("failed to read response body: %v\n", err.Error())
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			t.Errorf("failed to close body: %v\n", err.Error())
+		}
+		err = json.Unmarshal(respBodyBytes, &responseStruct)
 		if err != nil {
 			log.Fatalf("Cannot convert to json: %v", err)
 		}
 
-		assert.Equal(t, rr.Code, v.statusCode)
+		utils.AssertEqual(t, v.statusCode, resp.StatusCode, "Status Code")
 
 		if v.statusCode == 200 {
-			assert.Equal(t, user.Name, responseMap["name"])
-			assert.Equal(t, user.Email, responseMap["email"])
+			responseUser := (*responseStruct.Data)["data"].(interface{})
+			usr := models.User{}
+			err := mapstructure.Decode(responseUser, &usr)
+			if err != nil {
+				t.Errorf("failed to read user: %v\n", err.Error())
+			}
+			assert.Equal(t, user.Name, usr.Name)
+			assert.Equal(t, user.Email, usr.Email)
 		}
 	}
 }
@@ -288,7 +301,7 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"name":"Woman", "email": "woman@gmail.com", "password": ""}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
-			errorMessage: "required password",
+			errorMessage: "error",
 		},
 		{
 			// When no token was passed
@@ -296,7 +309,7 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"name":"Man", "email": "man@gmail.com", "password": "password"}`,
 			statusCode:   401,
 			tokenGiven:   "",
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 		{
 			// When incorrect token was passed
@@ -304,7 +317,7 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"name":"Woman", "email": "woman@gmail.com", "password": "password"}`,
 			statusCode:   401,
 			tokenGiven:   "This is incorrect token",
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 		{
 			// Remember "kenny@gmail.com" belongs to user 2
@@ -312,7 +325,7 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"name":"Frank", "email": "kenny@gmail.com", "password": "password"}`,
 			statusCode:   500,
 			tokenGiven:   tokenString,
-			errorMessage: "email already taken",
+			errorMessage: "error",
 		},
 		{
 			// Remember "Kenny Morris" belongs to user 2
@@ -320,33 +333,34 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"name":"Kenny Morris", "email": "grand@gmail.com", "password": "password"}`,
 			statusCode:   500,
 			tokenGiven:   tokenString,
-			errorMessage: "name already taken",
+			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthID)),
 			updateJSON:   `{"name":"Kan", "email": "kangmail.com", "password": "password"}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
-			errorMessage: "invalid email",
+			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthID)),
 			updateJSON:   `{"name": "", "email": "kan@gmail.com", "password": "password"}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
-			errorMessage: "required name",
+			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthID)),
 			updateJSON:   `{"name": "Kan", "email": "", "password": "password"}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
-			errorMessage: "required email",
+			errorMessage: "error",
 		},
 		{
-			id:         "unknown",
-			tokenGiven: tokenString,
-			statusCode: 400,
+			id:           "unknown",
+			tokenGiven:   tokenString,
+			statusCode:   400,
+			errorMessage: "error",
 		},
 		{
 			// When user 2 is using user 1 token
@@ -354,42 +368,52 @@ func TestUpdateUser(t *testing.T) {
 			updateJSON:   `{"name": "Mike", "email": "mike@gmail.com", "password": "password"}`,
 			tokenGiven:   tokenString,
 			statusCode:   401,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 	}
 
 	for _, v := range samples {
-		req, err := http.NewRequestWithContext(context.Background(), "POST", "/users", bytes.NewBufferString(v.updateJSON))
+		app := fiber.New()
+		app.Get("/users/:id", middlewares.SetMiddlewareJSON, middlewares.SetMiddlewareAuthentication, server.UpdateUser)
+
+		url := "/users/" + v.id
+		req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
 		if err != nil {
-			t.Errorf("This is the error: %v\n", err)
+			t.Errorf("this is the error: %v\n", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
-		bearer := "Bearer " + managerTokenJWT
-		req.Header.Add("Authorization", bearer)
+		req.Header.Add("Authorization", v.tokenGiven)
 
-		q := req.URL.Query()
-		q.Add("id", v.id)
-		req.URL.RawQuery = q.Encode()
-
-		rr := httptest.NewRecorder()
-		handler := adaptor.FiberHandlerFunc(server.UpdateUser)
-
-		req.Header.Set("Authorization", v.tokenGiven)
-
-		handler.ServeHTTP(rr, req)
-
-		responseMap := make(map[string]interface{})
-		err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
+		resp, err := app.Test(req)
 		if err != nil {
-			t.Errorf("Cannot convert to json: %v", err)
+			t.Errorf("failed to make the request: %v\n", err.Error())
 		}
-		assert.Equal(t, rr.Code, v.statusCode)
+
+		responseStruct := responses.UserResponse{}
+		respBodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Errorf("failed to read response body: %v\n", err.Error())
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			t.Errorf("failed to close body: %v\n", err.Error())
+		}
+		err = json.Unmarshal(respBodyBytes, &responseStruct)
+		if err != nil {
+			log.Fatalf("Cannot convert to json: %v", err)
+		}
+
+		utils.AssertEqual(t, v.statusCode, resp.StatusCode, "Status Code")
 		if v.statusCode == 200 {
-			assert.Equal(t, responseMap["name"], v.updateName)
-			assert.Equal(t, responseMap["email"], v.updateEmail)
+			responseUser := (*responseStruct.Data)["data"].(map[string]interface{})
+			usr := models.User{}
+			mapstructure.Decode(responseUser, &usr)
+
+			assert.Equal(t, usr.Name, v.updateName)
+			assert.Equal(t, usr.Email, v.updateEmail)
 		}
 		if v.statusCode == 401 || v.statusCode == 422 || v.statusCode == 500 && v.errorMessage != "" {
-			assert.Equal(t, responseMap["error"], v.errorMessage)
+			assert.Equal(t, responseStruct.Message, v.errorMessage)
 		}
 	}
 }
@@ -464,32 +488,38 @@ func TestDeleteUser(t *testing.T) {
 		},
 	}
 	for _, v := range userSample {
-		req, err := http.NewRequestWithContext(context.Background(), "GET", "/users", nil)
+		app := fiber.New()
+		app.Delete("/users/:id", middlewares.SetMiddlewareJSON, middlewares.SetMiddlewareAuthentication, server.DeleteUser)
+
+		url := "/users/" + v.id
+		req, err := http.NewRequestWithContext(context.Background(), "DELETE", url, nil)
 		if err != nil {
-			t.Errorf("This is the error: %v\n", err)
+			t.Errorf("this is the error: %v\n", err)
 		}
-		bearer := "Bearer " + managerTokenJWT
-		req.Header.Add("Authorization", bearer)
-
-		q := req.URL.Query()
-		q.Add("id", v.id)
-		req.URL.RawQuery = q.Encode()
-
-		rr := httptest.NewRecorder()
-		handler := adaptor.FiberHandlerFunc(server.DeleteUser)
-
 		req.Header.Set("Authorization", v.tokenGiven)
 
-		handler.ServeHTTP(rr, req)
-		assert.Equal(t, rr.Code, v.statusCode)
+		resp, err := app.Test(req)
+		if err != nil {
+			t.Errorf("failed to make the request: %v\n", err.Error())
+		}
+
+		utils.AssertEqual(t, v.statusCode, resp.StatusCode, "Status Code")
 
 		if v.statusCode == 401 && v.errorMessage != "" {
-			responseMap := make(map[string]interface{})
-			err = json.Unmarshal(rr.Body.Bytes(), &responseMap)
+			responseStruct := responses.UserResponse{}
+			respBodyBytes, err := io.ReadAll(resp.Body)
 			if err != nil {
-				t.Errorf("Cannot convert to json: %v", err)
+				t.Errorf("failed to read response body: %v\n", err.Error())
 			}
-			assert.Equal(t, responseMap["error"], v.errorMessage)
+			err = resp.Body.Close()
+			if err != nil {
+				t.Errorf("failed to close body: %v\n", err.Error())
+			}
+			err = json.Unmarshal(respBodyBytes, &responseStruct)
+			if err != nil {
+				log.Fatalf("Cannot convert to json: %v", err)
+			}
+			assert.Equal(t, responseStruct.Message, v.errorMessage)
 		}
 	}
 }

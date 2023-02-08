@@ -207,7 +207,7 @@ func TestGetTaskByID(t *testing.T) {
 			log.Fatalf("Cannot convert to json: %v", err)
 		}
 
-		utils.AssertEqual(t, v.statusCode, resp.StatusCode)
+		utils.AssertEqual(t, v.statusCode, resp.StatusCode, "Status Code")
 
 		if v.statusCode == 200 {
 			task.DecryptSummary()
