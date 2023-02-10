@@ -1,7 +1,7 @@
 # Sword Health Code Challenge
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/PixDale/sh-code-challenge.svg)](https://pkg.go.dev/github.com/PixDale/sh-code-challenge)
-[![go.mod](https://img.shields.io/github/go-mod/go-version/PixDale/sh-code-challenge)](go.mod)
+[![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](http://golang.org)
+[![go.mod](https://img.shields.io/github/go-mod/go-version/PixDale/sh-code-challenge/main)](go.mod)
 [![LICENSE](https://img.shields.io/github/license/PixDale/sh-code-challenge)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/PixDale/sh-code-challenge)](https://goreportcard.com/report/github.com/PixDale/sh-code-challenge)
 
