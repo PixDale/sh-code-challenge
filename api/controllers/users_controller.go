@@ -1,3 +1,4 @@
+// Pakcage controllers implements several handler for the RestAPI app
 package controllers
 
 import (
@@ -15,6 +16,7 @@ import (
 	"github.com/PixDale/sh-code-challenge/api/utils/formaterror"
 )
 
+// CreateUser is a handler for creating a new user.
 func (server *Server) CreateUser(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	user := models.User{}
@@ -41,6 +43,7 @@ func (server *Server) CreateUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusCreated).JSON(responses.UserResponse{Status: fiber.StatusCreated, Message: "success", Data: &fiber.Map{"data": userCreated}})
 }
 
+// GetUsers is a handler for retrieving a list of users.
 func (server *Server) GetUsers(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	user := models.User{}
@@ -60,6 +63,7 @@ func (server *Server) GetUsers(c *fiber.Ctx) error {
 	)
 }
 
+// GetUser is a handler for retrieving a specific user.
 func (server *Server) GetUser(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	userID := c.Params("id")
@@ -81,6 +85,7 @@ func (server *Server) GetUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(responses.UserResponse{Status: fiber.StatusOK, Message: "success", Data: &fiber.Map{"data": userGotten}})
 }
 
+// UpdateUser is a handler for updating a user.
 func (server *Server) UpdateUser(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	userID := c.Params("id")
@@ -126,6 +131,7 @@ func (server *Server) UpdateUser(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(responses.UserResponse{Status: fiber.StatusOK, Message: "success", Data: &fiber.Map{"data": updatedUser}})
 }
 
+// DeleteUser is a handler for deleting a user
 func (server *Server) DeleteUser(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	userID := c.Params("id")
