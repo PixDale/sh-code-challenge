@@ -77,7 +77,10 @@ Access to all endpoints except for login, requires a JSON Web Token (JWT) for au
 Authorization: Bearer [JWT_TOKEN]
 ```
 ### **Tests**
-To run the tests...
+To run the test environment along with the unit tests run the command:
+```
+docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
+```
 
 ## **License**
 
