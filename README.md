@@ -40,6 +40,9 @@ cd sh-code-challenge
 docker-compose up
 ```
 
+**PS:** If needed you can clean docker cache before start, using the command **make docker_clean**
+
+
 ### **API Endpoints**
 
 The API provides the following endpoints for task management and authentication:
