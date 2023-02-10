@@ -19,7 +19,7 @@ services:
       - fullstack
 
   fullstack-mysql:
-    image: mysql
+    image: mysql:8.0.31
     container_name: full_db_mysql
     ports:
       - 3306:3306
@@ -34,11 +34,12 @@ services:
     networks:
       - fullstack
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 2s
-      timeout: 20s
-      retries: 10
-  
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      interval: 3s
+      timeout: 70s
+      retries: 20
+      start_period: 10s
+
   message-broker:
     image: rabbitmq:3-management-alpine
     container_name: message-broker
@@ -80,6 +81,7 @@ volumes:
   database_mysql:
   dev_rabbitmq-data:
   dev_rabbitmq-log:
+
 
 networks:
   fullstack:
