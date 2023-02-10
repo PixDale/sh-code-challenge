@@ -64,7 +64,7 @@ func TestCreateTask(t *testing.T) {
 		},
 		{
 			inputJSON:    fmt.Sprintf("{\"summary\": \"\", \"user_id\": %d}", managerUser.ID),
-			statusCode:   422,
+			statusCode:   400,
 			tokenGiven:   managerTokenJWT,
 			errorMessage: "error",
 		},
@@ -100,7 +100,7 @@ func TestCreateTask(t *testing.T) {
 		if err != nil {
 			fmt.Printf("Cannot convert to json: %v", err)
 		}
-		assert.Equal(t, rr.Code, v.statusCode)
+		utils.AssertEqual(t, v.statusCode, rr.Code, "Status Code")
 		if v.statusCode == 201 {
 			responseTask := (*responseStruct.Data)["data"].(map[string]interface{})
 			tsk := models.Task{}

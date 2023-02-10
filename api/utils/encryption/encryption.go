@@ -1,3 +1,4 @@
+// Package encryption contains funtions to encrypt and decrypt text used by the application
 package encryption
 
 import (

@@ -68,6 +68,9 @@ func (u *User) Validate(action string) error {
 		if u.Email == "" {
 			return errors.New("required email")
 		}
+		if u.Role == 0 {
+			return errors.New("required role")
+		}
 		if err := checkmail.ValidateFormat(u.Email); err != nil {
 			return errors.New("invalid email")
 		}
@@ -94,6 +97,9 @@ func (u *User) Validate(action string) error {
 		}
 		if u.Email == "" {
 			return errors.New("required email")
+		}
+		if u.Role == 0 {
+			return errors.New("required role")
 		}
 		if err := checkmail.ValidateFormat(u.Email); err != nil {
 			return errors.New("invalid email")

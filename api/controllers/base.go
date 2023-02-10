@@ -1,3 +1,4 @@
+// Pakcage controllers implements several handler for the RestAPI app
 package controllers
 
 import (

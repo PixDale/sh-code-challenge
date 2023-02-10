@@ -1,3 +1,4 @@
+// Pakcage controllers implements several handler for the RestAPI app
 package controllers
 
 import (
@@ -85,6 +86,7 @@ func (server *Server) GetTasks(c *fiber.Ctx) error {
 	)
 }
 
+// GetTask is the handler for retrieving a specific task
 func (server *Server) GetTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	defer cancel()
@@ -117,6 +119,7 @@ func (server *Server) GetTask(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(responses.UserResponse{Status: fiber.StatusOK, Message: "success", Data: &fiber.Map{"data": taskReceived}})
 }
 
+// UpdateTask is the hadler for updating a specific task
 func (server *Server) UpdateTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	taskID := c.Params("id")
@@ -176,6 +179,7 @@ func (server *Server) UpdateTask(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(responses.UserResponse{Status: fiber.StatusOK, Message: "success", Data: &fiber.Map{"data": taskUpdated}})
 }
 
+// DeleteTask is the handler for deleting a task
 func (server *Server) DeleteTask(c *fiber.Ctx) error {
 	_, cancel := context.WithTimeout(context.Background(), requestTimeout)
 	taskID := c.Params("id")

@@ -1,7 +1,7 @@
 # Sword Health Code Challenge
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/PixDale/sh-code-challenge.svg)](https://pkg.go.dev/github.com/PixDale/sh-code-challenge)
-[![go.mod](https://img.shields.io/github/go-mod/go-version/PixDale/sh-code-challenge)](go.mod)
+[![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](http://golang.org)
+[![go.mod](https://img.shields.io/github/go-mod/go-version/PixDale/sh-code-challenge/main)](go.mod)
 [![LICENSE](https://img.shields.io/github/license/PixDale/sh-code-challenge)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/PixDale/sh-code-challenge)](https://goreportcard.com/report/github.com/PixDale/sh-code-challenge)
 
@@ -40,6 +40,9 @@ cd sh-code-challenge
 docker-compose up
 ```
 
+**PS:** If needed you can clean docker cache before start, using the command **make docker_clean**
+
+
 ### **API Endpoints**
 
 The API provides the following endpoints for task management and authentication:
@@ -77,8 +80,26 @@ Access to all endpoints except for login, requires a JSON Web Token (JWT) for au
 Authorization: Bearer [JWT_TOKEN]
 ```
 ### **Tests**
-To run the tests...
+To run the test environment along with the unit tests run the command:
+```
+docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
+```
+
+### **Doc**
+To check the Golang documentation, first you need to have **godoc** cmd. To install it run:
+```
+go install -v golang.org/x/tools/cmd/godoc@latest
+```
+
+After installed, run:
+```
+godoc --http=localhost:6060
+```
+then access: **http://127.0.0.1:6060/pkg/github.com/PixDale/sh-code-challenge/**
 
 ## **License**
 
 This project is licensed under the MIT License.
+
+## **Kubernetes**
+Unfortunatelly, I couldn't finish the Kubernetes implementation, it would require even more time, so I didn't add it to the main branch.

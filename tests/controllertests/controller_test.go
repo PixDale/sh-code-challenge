@@ -29,6 +29,7 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Error getting env %v\n", err)
 	}
 	Database()
+	time.Sleep(3 * time.Second)
 	Authenticate()
 
 	os.Exit(m.Run())
@@ -136,11 +137,13 @@ func seedUsers() ([]models.User, error) {
 			Name:     "Steven victor",
 			Email:    "steven@gmail.com",
 			Password: "password",
+			Role:     1,
 		},
 		{
 			Name:     "Kenny Morris",
 			Email:    "kenny@gmail.com",
 			Password: "password",
+			Role:     1,
 		},
 	}
 	for i := range users {

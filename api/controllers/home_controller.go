@@ -1,3 +1,4 @@
+// Pakcage controllers implements several handler for the RestAPI app
 package controllers
 
 import (
@@ -7,6 +8,6 @@ import (
 func (server *Server) Home(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
 		"success": true,
-		"message": "Welcome To This API",
+		"message": "Welcome To This API Challenge",
 	})
 }
