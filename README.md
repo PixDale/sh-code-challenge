@@ -97,3 +97,6 @@ then access: **http://127.0.0.1:6060/pkg/github.com/PixDale/sh-code-challenge/**
 ## **License**
 
 This project is licensed under the MIT License.
+
+## **Kubernetes**
+Unfortunatelly, I couldn't finish the Kubernetes implementation, it would require even more time, so I didn't add it to the main branch.
