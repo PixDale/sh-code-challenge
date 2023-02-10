@@ -82,6 +82,18 @@ To run the test environment along with the unit tests run the command:
 docker-compose -f docker-compose.test.yml up --build --abort-on-container-exit
 ```
 
+### **Doc**
+To check the Golang documentation, first you need to have **godoc** cmd. To install it run:
+```
+go install -v golang.org/x/tools/cmd/godoc@latest
+```
+
+After installed, run:
+```
+godoc --http=localhost:6060
+```
+then access: **http://127.0.0.1:6060/pkg/github.com/PixDale/sh-code-challenge/**
+
 ## **License**
 
 This project is licensed under the MIT License.
