@@ -1,3 +1,4 @@
+// Package formaterror provides custom errors to be used by the application
 package formaterror
 
 import (

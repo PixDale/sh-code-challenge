@@ -1,3 +1,4 @@
+// Package api provides the main server for the application
 package api
 
 import (

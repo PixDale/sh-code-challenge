@@ -1,3 +1,4 @@
+// Package auth contains the rule of authentication and authorization used by the application
 package auth
 
 import (
