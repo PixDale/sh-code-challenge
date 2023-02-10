@@ -38,22 +38,6 @@ services:
       interval: 2s
       timeout: 20s
       retries: 10
-
-  phpmyadmin:
-    image: phpmyadmin
-    container_name: phpmyadmin_container
-    depends_on:
-      - fullstack-mysql
-    environment:
-     - PMA_HOST=fullstack-mysql
-     - PMA_USER=${DB_USER}
-     - PMA_PORT=${DB_PORT}
-     - PMA_PASSWORD=${DB_PASSWORD}
-    ports:
-      - 9090:80
-    restart: always
-    networks:
-      - fullstack
   
   message-broker:
     image: rabbitmq:3-management-alpine

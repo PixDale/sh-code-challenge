@@ -32,10 +32,10 @@ services:
       - fullstack_test
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 2s
-      timeout: 60s
-      retries: 10
-      start_period: 20s
+      interval: 3s
+      timeout: 70s
+      retries: 20
+      start_period: 10s
       
   
 volumes:

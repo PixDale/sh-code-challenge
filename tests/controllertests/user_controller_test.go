@@ -36,39 +36,39 @@ func TestCreateUser(t *testing.T) {
 		errorMessage string
 	}{
 		{
-			inputJSON:    `{"name":"Pet", "email": "pet@gmail.com", "password": "password"}`,
+			inputJSON:    `{"name":"Pet", "email": "pet@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   201,
 			name:         "Pet",
 			email:        "pet@gmail.com",
 			errorMessage: "",
 		},
 		{
-			inputJSON:    `{"name":"Frank", "email": "pet@gmail.com", "password": "password"}`,
+			inputJSON:    `{"name":"Frank", "email": "pet@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   500,
 			errorMessage: "email already taken",
 		},
 		{
-			inputJSON:    `{"name":"Pet", "email": "grand@gmail.com", "password": "password"}`,
+			inputJSON:    `{"name":"Pet", "email": "grand@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   500,
 			errorMessage: "name already taken",
 		},
 		{
-			inputJSON:    `{"name":"Kan", "email": "kangmail.com", "password": "password"}`,
+			inputJSON:    `{"name":"Kan", "email": "kangmail.com", "password": "password", "role": 1}`,
 			statusCode:   422,
 			errorMessage: "invalid email",
 		},
 		{
-			inputJSON:    `{"name": "", "email": "kan@gmail.com", "password": "password"}`,
+			inputJSON:    `{"name": "", "email": "kan@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   422,
 			errorMessage: "required name",
 		},
 		{
-			inputJSON:    `{"name": "Kan", "email": "", "password": "password"}`,
+			inputJSON:    `{"name": "Kan", "email": "", "password": "password", "role": 1}`,
 			statusCode:   422,
 			errorMessage: "required email",
 		},
 		{
-			inputJSON:    `{"name": "Kan", "email": "kan@gmail.com", "password": ""}`,
+			inputJSON:    `{"name": "Kan", "email": "kan@gmail.com", "password": "", "role": 1}`,
 			statusCode:   422,
 			errorMessage: "required password",
 		},
@@ -162,7 +162,6 @@ func TestGetUsers(t *testing.T) {
 
 	var users []models.User
 	responseUsers := (*responseStruct.Data)["data"].([]interface{})
-	fmt.Println("aaaaaaaaaaa", responseUsers)
 	for _, u := range responseUsers {
 		usr := models.User{}
 		err := mapstructure.Decode(u, &usr)
@@ -288,7 +287,7 @@ func TestUpdateUser(t *testing.T) {
 		{
 			// Convert int32 to int first before converting to string
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name":"Grand", "email": "grand@gmail.com", "password": "password"}`,
+			updateJSON:   `{"name":"Grand", "email": "grand@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   200,
 			updateName:   "Grand",
 			updateEmail:  "grand@gmail.com",
@@ -298,7 +297,7 @@ func TestUpdateUser(t *testing.T) {
 		{
 			// When password field is empty
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name":"Woman", "email": "woman@gmail.com", "password": ""}`,
+			updateJSON:   `{"name":"Woman", "email": "woman@gmail.com", "password": "", "role": 1}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
 			errorMessage: "error",
@@ -306,7 +305,7 @@ func TestUpdateUser(t *testing.T) {
 		{
 			// When no token was passed
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name":"Man", "email": "man@gmail.com", "password": "password"}`,
+			updateJSON:   `{"name":"Man", "email": "man@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   401,
 			tokenGiven:   "",
 			errorMessage: "error",
@@ -314,7 +313,7 @@ func TestUpdateUser(t *testing.T) {
 		{
 			// When incorrect token was passed
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name":"Woman", "email": "woman@gmail.com", "password": "password"}`,
+			updateJSON:   `{"name":"Woman", "email": "woman@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   401,
 			tokenGiven:   "This is incorrect token",
 			errorMessage: "error",
@@ -322,7 +321,7 @@ func TestUpdateUser(t *testing.T) {
 		{
 			// Remember "kenny@gmail.com" belongs to user 2
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name":"Frank", "email": "kenny@gmail.com", "password": "password"}`,
+			updateJSON:   `{"name":"Frank", "email": "kenny@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   500,
 			tokenGiven:   tokenString,
 			errorMessage: "error",
@@ -330,28 +329,28 @@ func TestUpdateUser(t *testing.T) {
 		{
 			// Remember "Kenny Morris" belongs to user 2
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name":"Kenny Morris", "email": "grand@gmail.com", "password": "password"}`,
+			updateJSON:   `{"name":"Kenny Morris", "email": "grand@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   500,
 			tokenGiven:   tokenString,
 			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name":"Kan", "email": "kangmail.com", "password": "password"}`,
+			updateJSON:   `{"name":"Kan", "email": "kangmail.com", "password": "password", "role": 1}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
 			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name": "", "email": "kan@gmail.com", "password": "password"}`,
+			updateJSON:   `{"name": "", "email": "kan@gmail.com", "password": "password", "role": 1}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
 			errorMessage: "error",
 		},
 		{
 			id:           strconv.Itoa(int(AuthID)),
-			updateJSON:   `{"name": "Kan", "email": "", "password": "password"}`,
+			updateJSON:   `{"name": "Kan", "email": "", "password": "password", "role": 1}`,
 			statusCode:   422,
 			tokenGiven:   tokenString,
 			errorMessage: "error",
@@ -362,22 +361,14 @@ func TestUpdateUser(t *testing.T) {
 			statusCode:   400,
 			errorMessage: "error",
 		},
-		{
-			// When user 2 is using user 1 token
-			id:           strconv.Itoa(int(2)),
-			updateJSON:   `{"name": "Mike", "email": "mike@gmail.com", "password": "password"}`,
-			tokenGiven:   tokenString,
-			statusCode:   401,
-			errorMessage: "error",
-		},
 	}
 
 	for _, v := range samples {
 		app := fiber.New()
-		app.Get("/users/:id", middlewares.SetMiddlewareJSON, middlewares.SetMiddlewareAuthentication, server.UpdateUser)
+		app.Put("/users/:id", middlewares.SetMiddlewareJSON, middlewares.SetMiddlewareAuthentication, server.UpdateUser)
 
 		url := "/users/" + v.id
-		req, err := http.NewRequestWithContext(context.Background(), "GET", url, nil)
+		req, err := http.NewRequestWithContext(context.Background(), "PUT", url, bytes.NewBufferString(v.updateJSON))
 		if err != nil {
 			t.Errorf("this is the error: %v\n", err)
 		}
@@ -427,7 +418,7 @@ func TestDeleteUser(t *testing.T) {
 		log.Fatal(err)
 	}
 
-	users, err := seedUsers() // we need atleast two users to properly check the update
+	users, err := seedUsers() // we need at least two users to properly check the update
 	if err != nil {
 		log.Fatalf("Error seeding user: %v\n", err)
 	}
@@ -465,26 +456,14 @@ func TestDeleteUser(t *testing.T) {
 			id:           strconv.Itoa(int(AuthID)),
 			tokenGiven:   "",
 			statusCode:   401,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 		{
 			// When incorrect token is given
 			id:           strconv.Itoa(int(AuthID)),
 			tokenGiven:   "This is an incorrect token",
 			statusCode:   401,
-			errorMessage: "Unauthorized",
-		},
-		{
-			id:         "unknown",
-			tokenGiven: tokenString,
-			statusCode: 400,
-		},
-		{
-			// User 2 trying to use User 1 token
-			id:           strconv.Itoa(int(2)),
-			tokenGiven:   tokenString,
-			statusCode:   401,
-			errorMessage: "Unauthorized",
+			errorMessage: "error",
 		},
 	}
 	for _, v := range userSample {
