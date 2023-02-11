@@ -50,7 +50,7 @@ The API provides the following endpoints for task management and authentication:
 
 - POST **`/tasks`**: create a new task
 ```json
-{"summary": "Performed a task", "user_id": 1} // the user_id must match the user id from token
+{"summary": "Performed a task", "user_id": 1} the user_id must match the user id from token
 ```
 - GET **`/tasks`**: retrieve a list of tasks
     - For requests with the Manager role, all tasks will be retrieved
@@ -62,7 +62,7 @@ The API provides the following endpoints for task management and authentication:
     - For requests with the Manager role, the task is updated unconditionally
     - For requests with the Technician role, the task is updated only if it belongs to this user
 ```json
-{"summary": "Performed a task", "user_id": 1} // the user_id must match the user id from token
+{"summary": "Performed a task", "user_id": 1} the user_id must match the user id from token
 ```
 - DELETE **`/tasks/{id}`**: delete a task
     - Requests must have a user token with the Manager role
