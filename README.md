@@ -97,9 +97,19 @@ godoc --http=localhost:6060
 ```
 then access: **http://127.0.0.1:6060/pkg/github.com/PixDale/sh-code-challenge/**
 
+
+
+### **Kubernetes**
+To start the kubernetes deployment, first you need to have **`minikube`** and **`kubectl`** installed, then run:
+```
+make kube_start
+make kube_apply
+```
+
+After that if you want to stop, run:
+```
+make kube_stop
+```
 ## **License**
 
 This project is licensed under the MIT License.
-
-## **Kubernetes**
-Unfortunatelly, I couldn't finish the Kubernetes implementation, it would require even more time, so I didn't add it to the main branch.
