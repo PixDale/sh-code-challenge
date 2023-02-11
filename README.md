@@ -79,6 +79,14 @@ Access to all endpoints except for login, requires a JSON Web Token (JWT) for au
 ```
 Authorization: Bearer [JWT_TOKEN]
 ```
+
+### **Notification**
+This project contains 2 apps, in addition to the main API app, there is also a notification app, which can be found in the root of the repository.
+
+This notification app is responsible for receiving and handling the notification sent by the main API app. It currently only prints the notification to standard output, but it can easily be replaced with another means of generating a notification.
+
+In the main API app, notifications are implemented as a middleware, checking whether the current request comes from a technician, if so, it sends a message to the notification queue, containing the action that this user is performing.
+
 ### **Tests**
 To run the test environment along with the unit tests run the command:
 ```
