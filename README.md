@@ -1,3 +1,4 @@
+
 # Sword Health Code Challenge
 
 [![made-with-Go](https://img.shields.io/badge/Made%20with-Go-1f425f.svg)](http://golang.org)
@@ -48,7 +49,9 @@ docker-compose up
 The API provides the following endpoints for task management and authentication:
 
 - POST **`/tasks`**: create a new task
-    - Requests must have a user with the Manager role
+```json
+{"summary": "Performed a task", "user_id": 1} // the user_id must match the user id from token
+```
 - GET **`/tasks`**: retrieve a list of tasks
     - For requests with the Manager role, all tasks will be retrieved
     - For requests with the Technician role, only the task from this user will be retrieved
@@ -58,15 +61,24 @@ The API provides the following endpoints for task management and authentication:
 - PUT **`/tasks/{id}`**: update an existing task
     - For requests with the Manager role, the task is updated unconditionally
     - For requests with the Technician role, the task is updated only if it belongs to this user
+```json
+{"summary": "Performed a task", "user_id": 1} // the user_id must match the user id from token
+```
 - DELETE **`/tasks/{id}`**: delete a task
-    - Requests must have a user with the Manager role
+    - Requests must have a user token with the Manager role
 
-All user management requests must have a user with the Manager role
+All user management requests must have a user token with the Manager role
 
 - POST **`/users`**: register a new user
+```json
+{"name": "Felipe", "email": "felipe@mail.com", "password": "123", "role": 1}
+```
 - GET **`/users`**: retrieve a list of users
 - GET **`/users/{id}`**: retrieve a single user by ID
 - PUT **`/users/{id}`**: update an existing user
+```
+{"name": "Felipe", "email": "felipe@mail.com", "password": "123", "role": 1}
+```
 - DELETE **`/users/{id}`**: delete a user
 
 - POST **`/login`**: login to retrieve a JWT token
@@ -78,6 +90,14 @@ Access to all endpoints except for login, requires a JSON Web Token (JWT) for au
 
 ```
 Authorization: Bearer [JWT_TOKEN]
+```
+
+### **Authorization**
+There is role based authorization implemented for the API requests.
+Existing roles:
+```
+Manager Role: 1
+Technician Role: 2
 ```
 
 ### **Notification**
