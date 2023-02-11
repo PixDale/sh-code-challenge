@@ -16,7 +16,7 @@ spec:
     spec:                                                     # Spec for the container which will run in the Pod
       containers:
       - name: fullstack-app-mysql 
-        image: victorsteven/fullstack:1.3.3                   # The image we are getting from dockerhub
+        image: pixdale/sh-code-challenge:1.2.0                   # The image we are getting from dockerhub
         imagePullPolicy: IfNotPresent                         # If we have not pulled it before, get it from dockerhub
         ports:
           - name: http
